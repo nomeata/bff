@@ -2,10 +2,13 @@ module Data.IntMapOrd
   ( IntMapOrd,
     lookupR,
     lookup,
+    member,
+    memberR,
     union,
     empty,
     checkInsert,
-    fromAscPairList ) where
+    fromAscPairList,
+    toList) where
 
 import qualified Data.Map as Map
 import qualified Data.Bimap as Bimap
@@ -58,3 +61,6 @@ union h (IntMapOrd m) = Bimap.fold f (Right h) m
                                    then Left "Update violates unequality."
                                    else insert k a h
         f k a l         = l
+
+toList :: IntMapOrd a -> [(Int,a)]
+toList (IntMapOrd a) = Bimap.toList a

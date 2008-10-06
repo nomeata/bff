@@ -5,7 +5,10 @@ module Data.IntMapEq
     checkInsert,
     lookup,
     lookupR,
-    union ) where
+    member,
+    memberR,
+    union,
+    toList ) where
 
 import qualified Data.IntMap as IntMap
 import Prelude hiding (lookup)
@@ -51,3 +54,6 @@ union h (IntMapEq m) = IntMap.foldWithKey f (Right h) m
                                    then Left "Update violates unequality."
                                    else Right (insert j a h)
         f j a l         = l
+
+toList :: IntMapEq a -> [(Int,a)]
+toList (IntMapEq m) = IntMap.toList m
