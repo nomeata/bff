@@ -1,4 +1,49 @@
 {-# LANGUAGE TemplateHaskell #-}
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  QuickCheck
+-- Copyright   :  (c) 2008 Joachim Breitner
+-- 
+-- Maintainer  :  Joachim Breitner <mail@joachim-brietner.de>
+-- Stability   :  experimental
+--
+-- This modules describes the properties of the various IntMaps used
+-- by Janis Voigtlaender for his "Bidirectionalization For Free" work.
+--
+-- It also has a main function and can be run to verify these properties.
+--
+-----------------------------------------------------------------------------
+
+module QuickCheck (
+	-- * IntMap tests
+	  prop_Empty
+	, prop_Insert
+	, prop_Member
+	, prop_Union
+	, prop_FromAscList
+	
+	-- * IntMapEq tests
+	, prop_Injectivity_Eq
+	, prop_Empty_Eq
+	, prop_Insert_Eq
+	, prop_Member_Eq
+	, prop_Union_Good_Eq
+	, prop_Union_Bad_Eq
+	, prop_LookupR_Eq
+	, prop_MemberR_Eq
+	, prop_CheckInsert_Good_Eq
+	, prop_CheckInsert_Bad1_Eq
+	, prop_CheckInsert_Bad2_Eq
+
+	-- * IntMapOrd tests
+	, prop_Orderdness_Ord
+	, prop_CheckInsert_Good_Ord
+	, prop_CheckInsert_Bad1_Ord
+	, prop_CheckInsert_Bad2_Ord
+	, prop_CheckInsert_Bad3_Ord
+	, prop_Union_Good_Ord 
+	, prop_Union_Bad_Ord
+	) where 
 
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
@@ -19,16 +64,22 @@ instance Arbitrary a => Arbitrary (IntMap a) where
 	arbitrary = IntMap.fromList `fmap` arbitrary
 	coarbitrary = error "coabitrary not defined for IntMap a"
 
+-- | Looking up on an empty IntMap returns 'Nothing'
 prop_Empty :: Int -> Bool
 prop_Empty i =
 	IntMap.lookup i IntMap.empty == (Nothing :: Maybe ALPHA)
 
+-- | Lookup up a just inserted key returns it's new value,
+--   while lookup up after inserting with a different key does
+--   not change the lookup
 prop_Insert :: IntMap ALPHA -> Int -> ALPHA -> Int -> Bool
 prop_Insert m i a j =
 	IntMap.lookup j (IntMap.insert i a m) ==
 		if i == j then Just a
                           else IntMap.lookup j m
 
+-- | A key is a member exactly when 'IntMap.lookup' returns not 
+--   'Nothing'
 prop_Member :: IntMap ALPHA -> Int -> Bool
 prop_Member m i =
 	IntMap.member i m ==
@@ -36,12 +87,17 @@ prop_Member m i =
 			Just _  -> True
 			Nothing -> False
 
+-- | When lookup up a key from a union of two IntMaps, the returned value
+--   comes from the first IntMap, if it exists there, otherwise from the other 
+--   one, if it exists there.
 prop_Union :: IntMap ALPHA -> IntMap ALPHA -> Int -> Bool
 prop_Union m m' i =
 	asMaybe (IntMap.lookup i (IntMap.union m m')) ==
         	if IntMap.member i m then IntMap.lookup i m
                                      else IntMap.lookup i m'
 
+-- | Lookup up a key from a IntMap built by fromAscList is equivalent
+--   to using 'Data.List.lookup' on the original list.
 prop_FromAscList :: AscList ALPHA -> Int -> Bool
 prop_FromAscList (AscList asc) i =
 	lookup i asc == IntMap.lookup i (IntMap.fromAscList asc)
@@ -67,10 +123,14 @@ prop_Injectivity_Eq m i j =
 	        IntMapEq.lookup j m == Nothing ||
 		IntMapEq.lookup i m /= IntMapEq.lookup j m 
 
+-- | Looking up on an empty IntMapEq returns 'Nothing'
 prop_Empty_Eq :: Int -> Bool
 prop_Empty_Eq i =
 	IntMapEq.lookup i IntMapEq.empty == (Nothing :: Maybe ALPHA)
 
+-- | Lookup up a just inserted key returns it's new value,
+--   while lookup up after inserting with a different key does
+--   not change the lookup.
 prop_Insert_Eq :: IntMapEq ALPHA -> Int -> ALPHA -> Int -> Property
 prop_Insert_Eq m i a j =
 	let l = IntMapEq.toList m
@@ -79,6 +139,8 @@ prop_Insert_Eq m i a j =
 			if i == j then Just a
                           else IntMapEq.lookup j m
 
+-- | A key is a member exactly when 'IntMap.lookup' returns not 
+--   'Nothing'
 prop_Member_Eq :: IntMapEq ALPHA -> Int -> Bool
 prop_Member_Eq m i =
 	IntMapEq.member i m ==
@@ -88,6 +150,9 @@ prop_Member_Eq m i =
 
 
 -- It’s actually hard to get enough samples of good unions
+
+-- | A unions of two IntMapEq, where the Union is actually defined, behaves 
+--   as described in 'prop_Union'
 prop_Union_Good_Eq :: IntMapEq ALPHA -> IntMapEq ALPHA -> Int -> Property
 prop_Union_Good_Eq m m' i =
 	not (conflicting_Eq m m') ==>
@@ -97,6 +162,8 @@ prop_Union_Good_Eq m m' i =
 							       else IntMapEq.lookup i m'
 			Left _  -> False
 
+-- | A unions of two IntMapEq, where the Union is not defined, becaues there are
+--   conflicting values, returns an 'Left' value.
 prop_Union_Bad_Eq :: IntMapEq ALPHA -> IntMapEq ALPHA -> Property
 prop_Union_Bad_Eq m m' =
 	conflicting_Eq m m' ==>
@@ -107,11 +174,15 @@ prop_Union_Bad_Eq m m' =
 -- | Tests whether two IntMapsEq would conflict upon an merge, that is, whether a
 --   key-value pair exists, which is not overritten by a key in the first map, but
 --   whose value appears in the firt map already.
+conflicting_Eq :: (Eq a) => IntMapEq a -> IntMapEq a -> Bool
 conflicting_Eq m m' =
 	   let l  = IntMapEq.toList m
                l' = IntMapEq.toList m'
            in any (\(j,a') -> any (\(_,a) -> a == a') l && all (\(i,_) -> i/=j) l) l'
 
+-- | Lookup up a just inserted value returns it's new key,
+--   while lookup up after inserting with a different value does
+--   not change the lookup.
 prop_LookupR_Eq :: IntMapEq ALPHA -> ALPHA -> Int -> ALPHA -> Property
 prop_LookupR_Eq m a i a' =
 	-- otherwise insert is not defined
@@ -123,6 +194,7 @@ prop_LookupR_Eq m a i a' =
 					   else IntMapEq.lookupR a m
                         Left _   -> False
 
+-- | A value is a member exactly when 'IntMapEq.lookupR' returns not 'Nothing'
 prop_MemberR_Eq :: IntMapEq ALPHA -> ALPHA -> Bool
 prop_MemberR_Eq m a =
 	IntMapEq.memberR a m ==
@@ -130,6 +202,8 @@ prop_MemberR_Eq m a =
 			Just _  -> True
 			Nothing -> False
 
+-- | For a value where 'IntMapEq.checkInsert' is defined, this behavas 
+--   as in 'prop_Insert'.
 prop_CheckInsert_Good_Eq :: IntMapEq ALPHA -> Int -> ALPHA -> Property
 prop_CheckInsert_Good_Eq m i a =
 	let l = IntMapEq.toList m
@@ -138,6 +212,8 @@ prop_CheckInsert_Good_Eq m i a =
 			Right m' -> IntMapEq.lookup i m' == Just a
                         Left _   -> False
 		
+-- | For values that violate the equality condition of updates, 'IntMapEq.checkInsert'
+--   returns an error message.
 prop_CheckInsert_Bad1_Eq :: IntMapEq ALPHA -> Int -> ALPHA -> Property
 prop_CheckInsert_Bad1_Eq m i a =
 	let l = IntMapEq.toList m
@@ -146,6 +222,8 @@ prop_CheckInsert_Bad1_Eq m i a =
 			Right _                            -> False
                         Left "Update violates equality."   -> True
 
+-- | For values that violate the injectivity condition of the IntMapEq,
+--   'IntMapE.checkInsert' returns an error message.
 prop_CheckInsert_Bad2_Eq :: IntMapEq ALPHA -> Int -> ALPHA -> Property
 prop_CheckInsert_Bad2_Eq m i a =
 	let l = IntMapEq.toList m
@@ -175,6 +253,8 @@ prop_Orderdness_Ord m i j =
 	        IntMapOrd.lookup j m == Nothing ||
 		IntMapOrd.lookup i m < IntMapOrd.lookup j m 
 
+-- | For a value where 'IntMapOrd.checkInsert' is defined, this behavas 
+--   as in 'prop_Insert'.
 prop_CheckInsert_Good_Ord :: IntMapOrd OrdALPHA -> Int -> OrdALPHA -> Property
 prop_CheckInsert_Good_Ord m i a =
 	let l = IntMapOrd.toList m
@@ -185,6 +265,8 @@ prop_CheckInsert_Good_Ord m i a =
 			Right m' -> IntMapOrd.lookup i m' == Just a
                         Left _   -> False
 
+-- | For values that violate the equality condition of updates, 'IntMapOrd.checkInsert'
+--   returns an error message.
 prop_CheckInsert_Bad1_Ord :: IntMapOrd OrdALPHA -> Int -> OrdALPHA -> Property
 prop_CheckInsert_Bad1_Ord m i a =
 	let l = IntMapOrd.toList m
@@ -193,6 +275,8 @@ prop_CheckInsert_Bad1_Ord m i a =
 			Right _                            -> False
                         Left "Update violates equality."   -> True
 
+-- | For values that violate the injectivity condition of the IntMapOrd,
+--   'IntMapE.checkInsert' returns an error message.
 prop_CheckInsert_Bad2_Ord :: IntMapOrd OrdALPHA -> Int -> OrdALPHA -> Property
 prop_CheckInsert_Bad2_Ord m i a =
 	let l = IntMapOrd.toList m
@@ -201,6 +285,8 @@ prop_CheckInsert_Bad2_Ord m i a =
 			Right _                            -> False
                         Left "Update violates unequality." -> True
 
+-- | For values that violate the monotony condition of the IntMapOrd,
+--   'IntMapE.checkInsert' returns an error message.
 prop_CheckInsert_Bad3_Ord :: IntMapOrd OrdALPHA -> Int -> OrdALPHA -> Property
 prop_CheckInsert_Bad3_Ord m i a =
 	let l = IntMapOrd.toList m
@@ -212,6 +298,10 @@ prop_CheckInsert_Bad3_Ord m i a =
                         Left "Update violates relative order." -> True
 
 -- It’s actually hard to get enough samples of good unions
+
+
+-- | A unions of two IntMapOrd, where the Union is actually defined, behaves 
+--   as described in 'prop_Union'
 prop_Union_Good_Ord :: IntMapOrd OrdALPHA -> IntMapOrd OrdALPHA -> Int -> Property
 prop_Union_Good_Ord m m' i =
 	not (conflicting_Ord m m') ==>
@@ -221,6 +311,8 @@ prop_Union_Good_Ord m m' i =
 							        else IntMapOrd.lookup i m'
 			Left _  -> False
 
+-- | A unions of two IntMapOrd, where the Union is not defined, becaues there are
+--   conflicting values, returns an 'Left' value.
 prop_Union_Bad_Ord :: IntMapOrd OrdALPHA -> IntMapOrd OrdALPHA -> Property
 prop_Union_Bad_Ord m m' =
 	conflicting_Ord m m' ==>
@@ -232,6 +324,7 @@ prop_Union_Bad_Ord m m' =
 --   key-value pair exists, which is not overritten by a key in the first map, but
 --   whose value appears in the firt map already, or when their keys and values do
 --   not merge pairwise.
+conflicting_Ord :: (Ord a) => IntMapOrd a -> IntMapOrd a -> Bool
 conflicting_Ord m m' =
 	   let l  = IntMapOrd.toList m
                l' = IntMapOrd.toList m'
@@ -253,6 +346,7 @@ asMaybe :: Maybe a -> Maybe a
 asMaybe = id
 
 -- | similar to Test.Quickcheck.vector, but with unique elements
+uniqueVector :: (Arbitrary a, Eq a) => Int -> Gen [a]
 uniqueVector 0 = return []
 uniqueVector n = do tail <- uniqueVector (n-1)
 		    head <- searchFor (`notElem` tail) arbitrary
@@ -271,6 +365,7 @@ ascendingVector n = do head <- resize 0 arbitrary
 
 -- | finds a value satisfiying the predicate. WARNING: May not terminate if there is no
 --   such value, or the value is very unlikely to find.
+searchFor :: (Monad m) => (a -> Bool) -> m a -> m a
 searchFor pred gen = do x <- gen
                         if pred x then return x
                                   else searchFor pred gen
@@ -286,6 +381,7 @@ instance Arbitrary a => Arbitrary (AscList a) where
 	coarbitrary = error "coabitrary not defined for AscList a"
 
 
+main :: IO ()
 main = do $( runTestGroup "IntMap"
 		[ 'prop_Empty
 		, 'prop_Insert
