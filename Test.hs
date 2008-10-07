@@ -1,11 +1,14 @@
-{-# OPTIONS_GHC  -XTemplateHaskell -XFlexibleInstances -XFlexibleContexts #-}
+{-# OPTIONS_GHC  -XTemplateHaskell -XFlexibleInstances -XFlexibleContexts -fallow-undecidable-instances  #-}
 
 module Test where
 
 import Control.Applicative 
 import Control.Functor.Combinators.Lift
 import Control.Monad.Either
+import Control.Monad.Writer
+import Control.Monad.State
 import Data.Traversable
+import qualified Data.Traversable as T
 import Data.Foldable
 import Data.Zippable
 import Data.DeriveTH
@@ -54,3 +57,20 @@ instance (Zippable k1, Zippable k2)
 instance (Show (k1 a), Show (k2 a)) 
          => Show (Lift (,) k1 k2 a) where
   show (Lift p) = "Lift " ++ show p
+
+test1 = (Node (Leaf 1) (Node (Leaf 2) (Leaf 3)))
+test2 = (Node (Leaf "eins") (Node (Leaf "zwei") (Leaf "drei")))
+test3 = (Node (Node (Leaf "01") (Leaf "10")) (Leaf "11"))
+test4 = (Node (Leaf "one") (Leaf "two"))
+
+
+instance (Traversable t) => Zippable t where
+	tryZip c1 c2 = let list1 = execWriter $ T.mapM (tell . (:[])) c1 
+			   list2 = execWriter $ T.mapM (tell . (:[])) c2
+			   ret = flip evalState (zip list1 list2) $
+				    T.mapM (\_ -> do new <- gets head
+						     modify tail
+						     return new) c1
+		       in  if length list1 == length list2
+		           then Right ret
+                           else Left "Differnt number of values contained in argument to tryZip."
