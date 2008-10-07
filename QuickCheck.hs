@@ -8,7 +8,7 @@
 -- Stability   :  experimental
 --
 -- This modules describes the properties of the various IntMaps used
--- by Janis Voigtlaender for his "Bidirectionalization For Free" work.
+-- by Janis Voigtlaender for his \"Bidirectionalization For Free\" work.
 --
 -- It also has a main function and can be run to verify these properties.
 --
@@ -43,6 +43,11 @@ module QuickCheck (
 	, prop_CheckInsert_Bad3_Ord
 	, prop_Union_Good_Ord 
 	, prop_Union_Bad_Ord
+	, prop_LookupR_Ord
+	, prop_MemberR_Ord
+	
+	-- * The Main method
+	, main
 	) where 
 
 import Data.IntMap (IntMap)
@@ -338,6 +343,31 @@ conflicting_Ord m m' =
 				             | a < c = b > d || badMerge as bs (c:cs) (d:ds)
                                              | c < a = d > b || badMerge (a:as) (b:bs) cs ds
 
+-- | Lookup up a just inserted value returns it's new key,
+--   while lookup up after inserting with a different value does
+--   not change the lookup.
+prop_LookupR_Ord :: IntMapOrd OrdALPHA -> OrdALPHA -> Int -> OrdALPHA -> Property
+prop_LookupR_Ord m a i a' =
+	-- otherwise insert is not defined
+	let l = IntMapOrd.toList m
+            (is, as) = unzip l
+	in (i,a') `elem` l || all (\(j,a'') -> j /= i && a' /= a'') l 
+	   && length ((filter (<i)) is) == length ((filter (<a')) as) ==>
+		case IntMapOrd.checkInsert i a' m of
+			Right m' -> IntMapOrd.lookupR a m' == 
+				if a == a' then Just i
+					   else IntMapOrd.lookupR a m
+                        Left _   -> False
+
+-- | A value is a member exactly when 'IntMapOrd.lookupR' returns not 'Nothing'
+prop_MemberR_Ord :: IntMapOrd OrdALPHA -> OrdALPHA -> Bool
+prop_MemberR_Ord m a =
+	IntMapOrd.memberR a m ==
+		case IntMapOrd.lookupR a m of
+			Just _  -> True
+			Nothing -> False
+
+
 -- Helpers
 
 -- | some type signatures are genaral in the return monad. To easily fix then to 
@@ -410,4 +440,6 @@ main = do $( runTestGroup "IntMap"
 		, 'prop_CheckInsert_Bad3_Ord
 		, 'prop_Union_Good_Ord 
 		, 'prop_Union_Bad_Ord
+		, 'prop_LookupR_Ord
+		, 'prop_MemberR_Ord
 		] )
