@@ -1,5 +1,7 @@
 module Data.Zippable where
 
 class Zippable k where
-  tryZip :: k Int -> k a -> Either String (k (Int,a))
+  tryZipWith :: (a -> b -> Either String c) ->  k a -> k b -> Either String (k c)
+  tryZip :: k a -> k b -> Either String (k (a,b))
+  tryZip = tryZipWith (\a b -> Right (a,b))
 
