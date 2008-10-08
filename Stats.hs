@@ -12,7 +12,6 @@ import Data.Traversable hiding (mapM)
 import qualified Data.Traversable as T
 import qualified Data.Foldable as F 
 import Data.Zippable
-import Data.Zippable.Instances
 import Data.DeriveTH
 import Data.Derive.Zippable
 import Data.Derive.Traversable

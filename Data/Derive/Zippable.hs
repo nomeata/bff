@@ -6,7 +6,7 @@ import Language.Haskell.TH.All
 import Control.Monad
 import Control.Monad.Either
 import NormalizeData
-import Data.Zippable
+import Data.Zippable.Definition
 
 makeZippable :: Derivation
 makeZippable = derivation zip' "Zippable"

@@ -52,11 +52,9 @@ instance (Traversable t) => Zippable t where
 -}
 
 $(derive makeZippable ''Tree)
-$(derive makeZippable ''Maybe)
 $(derive makeZippable ''Tree2)
 $(derive makeZippable ''Tree3)
 $(derive makeZippable ''Pair)
-$(derive makeZippable ''[])
 $(derive makeZippable ''Nested)
 $(derive makeZippable ''MaybesTuples)
 
