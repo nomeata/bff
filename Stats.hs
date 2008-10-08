@@ -20,8 +20,10 @@ import Data.Derive.Functor
 import Data.List
 import Prelude
 import Data.Ord
+import Data.Maybe
 import Text.Printf
 import Graphics.Rendering.Chart
+import System.IO
 
 -- Configuration
 sizes = [0,10^3..10^4]
@@ -40,22 +42,22 @@ $(derive makeTraversable ''Tree)
 data Test c c' a = Test
 	{ testName    :: String
 	, genTestCase :: Int  -> c  a
-        , getTest     :: forall a. c a  -> c' a -- Polymorphic type important!
-	, putTest     :: c a  -> c' a -> c a
+        , getTest     :: c a  -> c' a -- Polymorphic type important!
+	, putTestMan  :: c a  -> c' a -> c a
+	, putTestAuto :: c a  -> c' a -> c a
         , modifyTest  :: c' a -> c' a
 	}
 
 test1 = Test
 	{ testName    = "Halve"
 	, genTestCase = \n -> [1..n]
-	, getTest     = \as -> take (length as `div` 2) as
-	, putTest     = \as as' -> as' ++ drop (length as `div` 2) as
+	, getTest     = get 
+	, putTestMan  = \as as' -> as' ++ drop (length as `div` 2) as
+	, putTestAuto = bff get
 	, modifyTest  = pairDance
 	}
-
-pairDance [] = []
-pairDance [x] = [x]
-pairDance (a:b:r) = (b:a:pairDance r)
+  where get :: [a] -> [a]
+        get as = take (length as `div` 2) as
 
 test2 :: Test Tree [] ()
 test2 = Test
@@ -63,13 +65,35 @@ test2 = Test
 	, genTestCase = fix (\loop n -> if n <= 1
                                         then Leaf ()
                                         else Node (loop (n`div`2)) (loop (n - (n`div`2))))
-	, getTest     = execWriter . T.mapM (tell . (:[])) 
-	, putTest     = \s v -> flip evalState v $
+	, getTest     = get
+	, putTestMan  = \s v -> flip evalState v $
 				    T.mapM (\_ -> do new <- gets head
 						     modify tail
 						     return new) s
+	, putTestAuto = bff get
 	, modifyTest  = pairDance
 	}
+  where get :: Tree a -> [a]
+ 	get = execWriter . T.mapM (tell . (:[])) 
+
+test3 :: Test [] [] Int
+test3 = Test
+	{ testName   = "nub"
+	, genTestCase = fix (\loop n -> if n <= 1
+                                        then [] else
+                                        [1..n`div`2] ++ loop (n - (n`div`2)))
+	, getTest     = get
+	, putTestMan  = \s v -> let mapping = zip (get s) v
+                                in  map (\x -> fromJust (lookup x mapping)) s
+	, putTestAuto = bff_Eq get
+	, modifyTest  = pairDance
+	}
+  where get :: Eq a => [a] -> [a]
+ 	get = nub
+
+pairDance [] = []
+pairDance [x] = [x]
+pairDance (a:b:r) = (b:a:pairDance r)
 
 stats test putter size = (mean . fst) `fmap` benchmark repetitions
 		(do let source = genTestCase test size
@@ -81,16 +105,15 @@ stats test putter size = (mean . fst) `fmap` benchmark repetitions
 		(\(source, view') -> deepEvaluate (putter test source view')
 		)
 
-manualPutter test = putTest test
-
-bffPutter test = bff (getTest test)
-
 deepEvaluate :: Show a => a -> IO a
 deepEvaluate x = evaluate (length (show x)) >> return x
 
 collectStats test = mapM (\size -> do
-		manual <- stats test manualPutter size
-	        automatic <- stats test bffPutter size
+		putStr "."
+		manual <- stats test putTestMan size
+		putStr "."
+	        automatic <- stats test putTestAuto size
+		putStr " "
                 return (size, manual, automatic)
 	) sizes
 
@@ -137,16 +160,19 @@ putGraph test statData filename = renderableToPNGFile r 800 400 filename
 runTest :: (Show (c v), Show (c' v), F.Foldable c', Zippable c', Traversable c, Eq v) =>
            Test c c' v -> IO ()
 runTest test = do
+	  putStrLn $ "" 
+	  putStr   $ "Test \"" ++ testName test ++ "\" "
 	  statData <- collectStats test
-	  putStrLn $ "Test \"" ++ testName test ++ "\":"
+          putStrLn $ ""
 	  putTable statData
 	  let graphFileName = testName test ++ ".png"
 	  putStrLn $ "Writing graph to " ++ graphFileName
 	  putGraph test statData graphFileName
 
-main = do putStrLn $ "Bff benchmarking program"
+main = do hSetBuffering stdout NoBuffering
+	  putStrLn $ "Bff benchmarking program"
           putStrLn $ "(c) 2008 Joachim Breitner"
 	  putStrLn $ "Repeating every test " ++ show repetitions ++ " times."
-	  putStrLn $ "" 
           runTest test1
 	  runTest test2
+	  runTest test3
