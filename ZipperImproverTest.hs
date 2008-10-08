@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances, FlexibleContexts, ExistentialQuantification, PolymorphicComponents #-}
 
 -- import Data.Zippable
 import Control.Monad.Either
@@ -36,11 +36,32 @@ tryZip' (Node x1 x2) (Node y1 y2)
 		return (Node z1 z2)
 tryZip' _ _ = left "Structure mismatch in tryZip" 
 
-
 -- Getting a proper Either value back in the end
 
 toEither (Return v) = Right v
 toEither (Wrap (F_Error s)) = Left s
+
+-- Inlining of (Free F_Either)
+
+newtype CError a = CError (forall b. (a -> Either String b) -> Either String b)
+
+instance Monad CError where
+	return a = CError (\h -> h a)
+ 	(CError p) >>= k = CError (\h -> p (\a -> case k a of CError q -> q h))
+
+left'' err = CError (const (Left err))
+
+toEither'' :: CError a -> Either String a
+toEither'' (CError p) = p Right
+
+tryZip'' :: Tree a -> Tree b -> CError (Tree (a,b))
+tryZip'' (Leaf x1) (Leaf y1)
+	   = do return (Leaf (x1,y1))
+tryZip'' (Node x1 x2) (Node y1 y2)
+	   = do z1 <- tryZip'' x1 y1
+		z2 <- tryZip'' x2 y2
+		return (Node z1 z2)
+tryZip'' _ _ = left'' "Structure mismatch in tryZip" 
 
 -- Generate a large Tree. Large enough so that +RTS -K100M is reqiured for all
 -- but the optimized runs below
@@ -71,6 +92,11 @@ main = do putStrLn "With Either monad:"
           let largeTree1 = genLargeTree True 5
               largeTree2 = genLargeTree True 6
 	  time $ result (toEither (improve (tryZip' largeTree1 largeTree2)))
+
+	  putStrLn "With CError, with improve:"
+          let largeTree1 = genLargeTree True 7
+              largeTree2 = genLargeTree True 8
+	  time $ result (toEither''(tryZip'' largeTree1 largeTree2))
 
  where result = putStrLn . either (const "Done") (const "Bug?") 
 	
