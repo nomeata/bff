@@ -6,6 +6,7 @@ import Language.Haskell.TH.All
 import Control.Monad
 import Control.Monad.Either
 import NormalizeData
+import Data.Zippable
 
 makeZippable :: Derivation
 makeZippable = derivation zip' "Zippable"
@@ -15,13 +16,15 @@ zip' dat | (dataArity dat) /= 1 = error "Can not handle types with artity not ze
 	   let typeName | dataName dat == "[]" = ConT ''[] -- doesn’t work!
                         | otherwise            = lK (dataName dat) []
  	       head = InstanceD [] (AppT (ConT (mkName "Zippable")) typeName)
-               func = funN "tryZipWith" (
+               func = funN "tryZipWith'" (
 			map mkClause (dataCtors dat) ++
-			if (length (dataCtors dat) > 1)
-                        then [Clause [WildP, WildP, WildP]
-                                  (NormalB (leftErr "Structure mismatch in tryZip"))
-			          [] ]
-                        else []
+			whenP (length (dataCtors dat) > 1)
+                              [Clause [WildP, WildP, WildP]
+                                  (NormalB (app (VarE 'cError) [LitE (StringL
+						"Structure mismatch in tryZip"
+					)]))
+			          []
+                              ]
 			)
 	   in [ head [ func ] ]
 
@@ -63,22 +66,18 @@ mkClause con = sclause [vr "func", lK (ctorName con) pat1names, lK (ctorName con
 		 VarT _ ->
 			lK "func" []
 		 ConT _ ->
-			LamE [x,y] $
-			CondE (x ==: y) (lK "Right" [x])
-			                (leftErr "Non-Data value mismatch in tryZip")
+			(VarE 'checkEquality)
 		 -- If we have tuples, we basically have to repeat the currenct procedure
 		 -- Using a case expressen, we can safly re-use variables names, even
 		 -- with nested tuples.
 		 t@(AppT _ _) | (ht, ts) <- typeApp t, isTupleT ht ->
 			tupMerge ts 
 		 AppT t (VarT _) | not (tyHasVar t) -> 
-			lK "tryZipWith" [vr "func"]
+			lK "tryZipWith'" [vr "func"]
 		 t@(AppT _ _) | not (tyHasVar t) -> 
-			LamE [x,y] $
-			CondE (x ==: y) (lK "Right" [x])
-			                (leftErr "Non-Data value mismatch in tryZip")
+			(VarE 'checkEquality)
 		 t@(AppT _ ct) ->
-			lK "tryZipWith" [zip ct]
+			lK "tryZipWith'" [zip ct]
 		 ForallT _ _ _ ->
 			error "Types with forall not supported by Zippable deriver."
 		 TupleT _ ->
@@ -101,8 +100,14 @@ tyHasVar t = case t of
 		 ArrowT -> False
 		 ListT  -> False
 
+whenP :: MonadPlus m => Bool -> m a -> m a
+whenP True  x = x
+whenP False _ = mzero
 
-leftErr str = lK "Left" [LitE (StringL str)]
+-- | Functions used in the derived code
+checkEquality x y = if (x == y) then return x
+				else cError "Non-Data value mismatch in tryZip"
+
 
 -- | Extract a 'DataDef' value from a type using the TH 'reify'
 -- framework.
