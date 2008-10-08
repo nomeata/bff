@@ -1,5 +1,10 @@
 {-# LANGUAGE ExistentialQuantification, PolymorphicComponents #-}
-module Data.Zippable where
+module Data.Zippable 
+	( CError
+	, cError
+	, cErrorToEither
+	, Zippable(..)
+	) where
 
 newtype CError a = CError (forall b. (a -> Either String b) -> Either String b)
 
