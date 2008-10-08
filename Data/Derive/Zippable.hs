@@ -20,7 +20,7 @@ zip' dat | (dataArity dat) /= 1 = error "Can not handle types with artity not ze
 			map mkClause (dataCtors dat) ++
 			whenP (length (dataCtors dat) > 1)
                               [Clause [WildP, WildP, WildP]
-                                  (NormalB (app (VarE 'cError) [LitE (StringL
+                                  (NormalB (app (VarE 'throwCError) [LitE (StringL
 						"Structure mismatch in tryZip"
 					)]))
 			          []
@@ -106,7 +106,7 @@ whenP False _ = mzero
 
 -- | Functions used in the derived code
 checkEquality x y = if (x == y) then return x
-				else cError "Non-Data value mismatch in tryZip"
+				else throwCError "Non-Data value mismatch in tryZip"
 
 
 -- | Extract a 'DataDef' value from a type using the TH 'reify'

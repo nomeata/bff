@@ -1,7 +1,7 @@
 {-# LANGUAGE ExistentialQuantification, PolymorphicComponents #-}
 module Data.Zippable 
 	( CError
-	, cError
+	, throwCError
 	, cErrorToEither
 	, Zippable(..)
 	) where
@@ -12,7 +12,8 @@ instance Monad CError where
 	return a = CError (\h -> h a)
  	(CError p) >>= k = CError (\h -> p (\a -> case k a of CError q -> q h))
 
-cError err = CError (const (Left err))
+throwCError :: String -> CError a
+throwCError err = CError (const (Left err))
 
 cErrorToEither :: CError a -> Either String a
 cErrorToEither (CError p) = p Right
