@@ -1,0 +1,24 @@
+name:           bff
+version:        0.1
+
+author:         Janis Voigtländer
+
+category:       Development, Language
+synopsis:       Bidirectionalization for free
+
+build-type:     Simple
+cabal-version:  >= 1.2
+
+library
+        exposed-modules:
+                Data.Zippable
+                Data.Derive.Zippable
+                Bff
+        other-modules:
+                Data.Zippable.Definition
+                Data.IntMapEq
+                Data.IntMapOrd
+        build-depends:
+                base, containers, mtl, template-haskell, category-extras, derive,
+                haskell98, bimap
+        
