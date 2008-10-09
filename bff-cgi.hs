@@ -3,6 +3,7 @@ import System.Directory
 import Network.CGI
 import Text.XHtml
 import Data.Maybe
+import Data.List
 
 page content =
        header << thetitle << "Bidirectionalization for Free -- Demo" +++
@@ -14,11 +15,10 @@ page content =
        )
         
 
-queryCode md = 
+queryCode code = 
            p << (
                 strong << "Enter the Haskell definitions:" +++ br +++
-                textarea ! [name "code", cols "80", rows "15"] <<
-			(fromMaybe defaultCode md)
+                textarea ! [name "code", cols "80", rows "15"] << code
            ) 
 
 defaultCode =
@@ -39,47 +39,76 @@ outputResult (Right s) =
                 pre << s
                 )
                 
-submit1 =  p << ( submit "submit1" "Calculate \"get source\"" )
+mkSubmit active what =
+	p << ( submit (submitId what) ("Evaluate \"" ++ submitCode what ++ "\"") )
+	     ! if active then [] else [disabled]
 
-submit2 =  p << ( submit "submit2" "Calculate \"bff get source view\"" )
-           
+data Run = Get | Bff String 
+
+submitId Get = "get source"
+submitId (Bff suffix) = "submitBff" ++ suffix
+
+submitCode Get = "get source"
+submitCode (Bff suffix) = "bff"++suffix++" get source view"
 
 main = do setCurrentDirectory "/tmp"
           runCGI (handleErrors cgiMain)
 
+-- This function will not work in all casses, but in most.
+addViewDefiniton code view = unlines (squashed ++ pad ++ new_line)
+  where filtered = filter (not . defines "view") (lines code)
+	squash [] = []
+	squash ("":_) = [""]
+	squash ("\r":_) = [""]
+	squash ls = ls
+	squashed = concat $ map squash $ group $ filtered
+	pad | last squashed == "" || last squashed == "\r" = []
+            | otherwise                                    = [""]
+	new_line = ["view = " ++ view]
+	
+defines "" (' ':_) = True
+defines "" ('=':_) = True
+defines "" "" = False
+defines "" _   = False
+defines _  ""  = False
+defines (i:is) (x:xs) | i == x = defines is xs
+                      | i /= x = False
+		   
+
 cgiMain = do
         setHeader "Content-type" "text/xml"
-        mCode   <- getInput "code"
-        mSubmit1<- getInput "submit1"
-        mSubmit2<- getInput "submit2"
+	
+	-- the next piece of code is not to be take seious
+	todo <- (listToMaybe . catMaybes) `fmap`
+                  mapM (\what -> (const what `fmap`) `fmap` getInput (submitId what))
+                     [Get,          Bff "",      Bff "_Eq",     Bff "_Ord"]
+        
+	code    <- fromMaybe defaultCode `fmap` getInput "code"
 
-        content <- case (mCode, mSubmit1, mSubmit2) of
-
-          (Just code, _, Just _) -> do
-                -- Use wants Bff to be run
+        (newCode, addOutput) <- case todo of
+	  Just what-> do
                 ret <- liftIO $ catchInterpreterErrors $
-				simpleInterpret code "bff get source view"
-                return $ queryCode mCode +++
-                         submit1 +++
-                         submit2 +++
-                         outputResult ret
+				simpleInterpret code $ submitCode what
+		return $ case what of 
+		   (Bff suffix) -> (code, Just ret)
+                   Get -> case ret of
+			  Left err   -> (code, Just (Left err))
+			  Right view -> (addViewDefiniton code view, Nothing)
+          Nothing -> return (code, Nothing)
 
-          (Just code, Just _, _) -> do
-                -- User wants getter to be run
-                ret <- liftIO $ catchInterpreterErrors $
-				simpleInterpret code "get source"
-                return $ case ret of
-                  Left err   -> queryCode mCode +++
-                                submit1 +++
-                         	submit2 +++
-                                outputResult (Left err)
-                  Right view -> let newCode = unlines (lines code ++ ["","view = " ++ view])
-				in queryCode (Just newCode) +++
-                                submit1 +++
-                                submit2
+	let hasView = any (defines "view") (lines newCode)
+	
+	mbType <- liftIO $ either (const Nothing) Just `fmap`
+			catchInterpreterErrors (simpleTypeOf newCode "get")
+	let hasOrd = maybe False ("(Ord " `isPrefixOf`) mbType
+	let hasEq = hasOrd || maybe False ("(Eq " `isPrefixOf`) mbType
 
-          _ -> 
-                -- Nothing present, ask for all
-                  return $      queryCode mCode +++
-                                submit1
-        output $ showHtml $ page $ content
+        output $ showHtml $ page $
+		queryCode newCode +++
+		mkSubmit True Get +++
+		mkSubmit (hasView && not hasEq) (Bff "") +++
+		mkSubmit (hasView && not hasOrd) (Bff "_Eq") +++
+		mkSubmit (hasView) (Bff "_Ord") +++
+		maybe noHtml outputResult addOutput
+		
+

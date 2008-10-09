@@ -14,7 +14,7 @@ library
                 Data.Zippable
                 Data.Derive.Zippable
                 Bff
-                BffInterpret
+                MyInterpret
         other-modules:
                 Data.Zippable.Definition
                 Data.IntMapEq

@@ -2,6 +2,7 @@
 
 module MyInterpret
         ( simpleInterpret
+	, simpleTypeOf
         , catchInterpreterErrors
         )
          where 
@@ -15,7 +16,7 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.Error
 import System.Posix.Signals
-import Data.Typeable
+import Data.Typeable (Typeable)
 import Data.List
 import Data.Either
 
@@ -105,8 +106,8 @@ timeoutIO action = bracket
 		return ret
 	)
 
-myInterpreter :: String -> IO String
-myInterpreter exp = timeoutIO $ do
+-- myInterpreter :: String -> IO String
+myInterpreter todo exp = timeoutIO $ do
         when (unsafe exp) $ throwDyn (MyException "Indicators for unsafe computations found in exp")
 
         session <- newSession
@@ -121,7 +122,7 @@ myInterpreter exp = timeoutIO $ do
                 -- liftIO $ Mueval.Resources.limitResources True
                 setImports modules
                 
-                eval exp
+                todo exp
         
 formatInterpreterError (UnknownError s) = "Unknown Interpreter Error " ++ s
 formatInterpreterError (WontCompile es) = "Could not compile code:\n" ++ unlines (map errMsg es)
@@ -153,7 +154,14 @@ catchInterpreterErrors action =
 
 simpleInterpret :: String -> String -> IO String 
 simpleInterpret defs what = 
-	myInterpreter $
+	myInterpreter eval $
+	   "let \n" ++
+	    unlines (map (replicate 12 ' '++) (lines defs)) ++ 
+            replicate 8 ' ' ++ "in " ++ what
+
+simpleTypeOf :: String -> String -> IO String 
+simpleTypeOf defs what = 
+	myInterpreter typeOf $
 	   "let \n" ++
 	    unlines (map (replicate 12 ' '++) (lines defs)) ++ 
             replicate 8 ' ' ++ "in " ++ what
