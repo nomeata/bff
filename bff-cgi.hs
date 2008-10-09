@@ -1,4 +1,4 @@
-import BffInterpret
+import MyInterpret
 import System.Directory
 import Network.CGI
 import Text.XHtml
@@ -14,26 +14,17 @@ page content =
        )
         
 
-querySource md = 
+queryCode md = 
            p << (
-                strong << "Enter the source Data:" +++ br +++
-                tt << "source = " +++ br +++
-                textarea ! [name "source"] << (fromMaybe "[1,2,3,4,5]" md)
+                strong << "Enter the Haskell definitions:" +++ br +++
+                textarea ! [name "code", cols "80", rows "15"] <<
+			(fromMaybe defaultCode md)
            ) 
 
-queryGetter md =
-           p << (
-                strong << "Enter the getter function: " +++ br +++
-                tt << "get s = " +++  br +++
-                textarea ! [name "getter"] << (fromMaybe "take 2 s" md)
-           ) 
-                
-queryView md =
-           p << (
-                strong << "Please update the View: " +++ br +++
-                tt << "view = " +++ br +++
-                textarea ! [name "view"] << (fromMaybe "1" md)
-           ) 
+defaultCode =
+	"source = [1,2,3,4,5]\n" ++
+	"\n"++
+        "get source = take 2 source\n"
 
 outputResult :: Either String String -> Html
 outputResult (Left s) = 
@@ -48,9 +39,9 @@ outputResult (Right s) =
                 pre << s
                 )
                 
-submit1 =  p << ( submit "submit1" "Apply getter" )
+submit1 =  p << ( submit "submit1" "Calculate \"get source\"" )
 
-submit2 =  p << ( submit "submit2" "Run Bff" )
+submit2 =  p << ( submit "submit2" "Calculate \"bff get source view\"" )
            
 
 main = do setCurrentDirectory "/tmp"
@@ -58,38 +49,37 @@ main = do setCurrentDirectory "/tmp"
 
 cgiMain = do
         setHeader "Content-type" "text/xml"
-        mSource <- getInput "source"
-        mGetter <- getInput "getter"
-        mView   <- getInput "view"
+        mCode   <- getInput "code"
         mSubmit1<- getInput "submit1"
         mSubmit2<- getInput "submit2"
 
-        content <- case (mSource, mGetter, mView, mSubmit1, mSubmit2) of
-          (Just source,Just getter,Just view, _, Just _) -> do
-                -- All input present, run Bff
-                ret <- liftIO $ catchEvalErrors $ interpretSetter source getter view
-                return $ querySource mSource +++
-                         queryGetter mGetter +++
+        content <- case (mCode, mSubmit1, mSubmit2) of
+
+          (Just code, _, Just _) -> do
+                -- Use wants Bff to be run
+                ret <- liftIO $ catchInterpreterErrors $
+				simpleInterpret code "bff get source view"
+                return $ queryCode mCode +++
                          submit1 +++
-                         queryView   mView +++
                          submit2 +++
                          outputResult ret
-          (Just source,Just getter, _ , Just _, _) -> do
-                -- Source and Getter present, calculate view
-                ret <- liftIO $ catchEvalErrors $ interpretGetter source getter
+
+          (Just code, Just _, _) -> do
+                -- User wants getter to be run
+                ret <- liftIO $ catchInterpreterErrors $
+				simpleInterpret code "get source"
                 return $ case ret of
-                  Left err   -> querySource mSource +++
-                                queryGetter mGetter +++
+                  Left err   -> queryCode mCode +++
                                 submit1 +++
+                         	submit2 +++
                                 outputResult (Left err)
-                  Right view -> querySource mSource +++
-                                queryGetter mGetter +++
+                  Right view -> let newCode = unlines (lines code ++ ["","view = " ++ view])
+				in queryCode (Just newCode) +++
                                 submit1 +++
-                                queryView   (Just view) +++
                                 submit2
+
           _ -> 
                 -- Nothing present, ask for all
-                  return $      querySource mSource +++
-                                queryGetter mGetter +++
+                  return $      queryCode mCode +++
                                 submit1
         output $ showHtml $ page $ content
