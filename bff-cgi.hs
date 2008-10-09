@@ -27,7 +27,7 @@ defaultCode = unlines
 	, "flatten (Leaf a) = [a]"
 	, "flatten (Node t1 t2) = flatten t1 ++ flatten t2"
 	, ""
-        , "get source = take 2 (sort (flatten source))"
+        , "get source = take 3 (nub (flatten source))"
 	]
 	
 outputErrors :: String -> Html
@@ -38,16 +38,21 @@ outputErrors s =
                 )
                 
 mkSubmit active what =
-	p << ( submit (submitId what) ("Evaluate \"" ++ submitCode what ++ "\"") )
+	p << ( submit (submitId what) (submitLabel what ))
 	     ! if active then [] else [disabled]
 
-data Run = Get | Bff String 
+data Run = Get | Check | Bff String 
 
 submitId Get = "get source"
+submitId Check = "check"
 submitId (Bff suffix) = "submitBff" ++ suffix
 
 submitCode Get = "get source"
+submitCode Check = undefined
 submitCode (Bff suffix) = "bff"++suffix++" get source view"
+
+submitLabel Check = "Re-check type of get"
+submitLabel x   = "Evaluate \""++submitCode x ++"\""
 
 main = do setCurrentDirectory "/tmp"
           runCGI (handleErrors cgiMain)
@@ -82,7 +87,7 @@ cgiMain = do
 	-- the next piece of code is not to be take seious
 	todo <- (listToMaybe . catMaybes) `fmap`
                   mapM (\what -> (const what `fmap`) `fmap` getInput (submitId what))
-                     [Get,          Bff "",      Bff "_Eq",     Bff "_Ord"]
+                     [Get, Bff "", Bff "_Eq", Bff "_Ord"] -- Check left out intentionally
         
 	code    <- fromMaybe defaultCode `fmap` getInput "code"
 
@@ -108,6 +113,7 @@ cgiMain = do
         output $ showHtml $ page $
 		queryCode newCode +++
 		mkSubmit True Get +++
+		mkSubmit (hasView) Check +++
 		mkSubmit (hasView && not hasEq) (Bff "") +++
 		mkSubmit (hasView && not hasOrd) (Bff "_Eq") +++
 		mkSubmit (hasView) (Bff "_Ord") +++
