@@ -14,11 +14,23 @@ library
                 Data.Zippable
                 Data.Derive.Zippable
                 Bff
+                BffInterpret
         other-modules:
                 Data.Zippable.Definition
                 Data.IntMapEq
                 Data.IntMapOrd
         build-depends:
                 base, containers, mtl, template-haskell, category-extras, derive,
-                haskell98, bimap
+                haskell98, bimap, unix, hint
         
+executable bff-shell
+        main-is:
+                bff-shell.hs
+        build-depends:
+                base, directory
+
+executable bff-cgi
+        main-is:
+                bff-cgi.hs
+        build-depends:
+                base, directory, xhtml, cgi
