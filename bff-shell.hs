@@ -1,9 +1,9 @@
-import BffInterpret
+import MyInterpret
 import System.Directory
 import System.IO
 
 
-main =  (=<<) (either putStrLn return) $ catchEvalErrors $ do -- <- still readable?
+main =  (=<<) (either putStrLn return) $ catchInterpreterErrors $ do
         setCurrentDirectory "/tmp"
 	hSetBuffering stdout NoBuffering
 	putStrLn "Bff demo bot"
@@ -15,10 +15,10 @@ main =  (=<<) (either putStrLn return) $ catchEvalErrors $ do -- <- still readab
 	getter <- getLine
 
 	putStrLn "Running \"get source\""
-	interpretGetter source getter >>= putStrLn
+	simpleInterpret ("source = " ++ source ++ "\nget s = " ++ getter ) "get source" >>= putStrLn
 
 	putStrLn "Please enter modified view"
 	view <- getLine
 
 	putStrLn "Running \"bff source get view\""
-        interpretSetter source getter view >>= putStrLn
+	simpleInterpret ("source = " ++ source ++ "\nget s = " ++ getter  ++ "\nview s = " ++ view ) "get source" >>= putStrLn
