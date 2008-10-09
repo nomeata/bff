@@ -1,9 +1,8 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 
-module BffInterpret
-        ( interpretSetter
-        , interpretGetter
-        , catchEvalErrors
+module MyInterpret
+        ( simpleInterpret
+        , catchInterpreterErrors
         )
          where 
 
@@ -76,15 +75,15 @@ modules = [    "Bff",
 --             "Data.Sequence",
         ]
 
-data BffException = BffException String deriving (Typeable)
+data MyException = MyException String deriving (Typeable)
 
 timeoutIO action = bracket
 	(do mainId <- myThreadId
-	    installHandler sigXCPU (CatchOnce $ throwDynTo mainId $ BffException "Time limit exceeded.") Nothing
+	    installHandler sigXCPU (CatchOnce $ throwDynTo mainId $ MyException "Time limit exceeded.") Nothing
 	    forkIO $ do
 		    threadDelay (5 * 1000 * 1000)
 		    -- Time's up. It's a good day to die.
-		    throwDynTo mainId (BffException "Time limit exceeded")
+		    throwDynTo mainId (MyException "Time limit exceeded")
 
 		    {- why do we need that here?
  - 		    yield -- give the other thread a chance
@@ -108,7 +107,7 @@ timeoutIO action = bracket
 
 myInterpreter :: String -> IO String
 myInterpreter exp = timeoutIO $ do
-        when (unsafe exp) $ throwDyn (BffException "Indicators for unsafe computations found in exp")
+        when (unsafe exp) $ throwDyn (MyException "Indicators for unsafe computations found in exp")
 
         session <- newSession
         withSession session $ do
@@ -145,24 +144,16 @@ unsafeNames = ["unsafe", "inlinePerform", "liftIO", "Coerce", "Foreign",
                "OpenGL", "Control.Concurrent", "System.Posix",
                "throw", "Dyn", "cache", "stdin", "stdout", "stderr"]
 
-catchEvalErrors :: IO a -> IO (Either String a)
-catchEvalErrors action = 
+catchInterpreterErrors :: IO a -> IO (Either String a)
+catchInterpreterErrors action = 
         flip catchDyn (return . Left . formatInterpreterError) $
-        flip catchDyn (\(BffException s) -> return (Left s))   $
+        flip catchDyn (\(MyException s) -> return (Left s))   $
 	handleJust errorCalls (return . Left)                  $ -- bff in Bff.hs uses these
         Right `fmap` action
 
-interpretGetter :: String -> String -> IO String
-interpretGetter source getter = 
+simpleInterpret :: String -> String -> IO String 
+simpleInterpret defs what = 
 	myInterpreter $
-	   "let { source = " ++ source ++ " ; " ++
-           "get s = " ++ getter ++ " } " ++
-           "in get source" 
-
-interpretSetter :: String -> String -> String -> IO String
-interpretSetter source getter view = 
-	myInterpreter $
-	   "let { source = " ++ source ++ " ; " ++
-           "get s = " ++ getter ++ " ; " ++
-           "view = " ++ view ++ " } " ++
-           "in bff get source view"
+	   "let \n" ++
+	    unlines (map (replicate 12 ' '++) (lines defs)) ++ 
+            replicate 8 ' ' ++ "in " ++ what
