@@ -5,7 +5,7 @@ module Data.Derive.Zippable (makeZippable) where
 import Language.Haskell.TH.All
 import Control.Monad
 import Control.Monad.Either
-import NormalizeData
+-- import NormalizeData
 import Data.Zippable.Definition
 
 makeZippable :: Derivation
