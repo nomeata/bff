@@ -21,59 +21,15 @@ import Data.List
 import Data.Either
 
 
+-- Scoped modules
 modules = [    "Bff",
 	       "Data.SimpleTree",
                "Prelude",
+               "Data.List"
 --               "ShowQ",
 --               "ShowFun",
 --               "SimpleReflect",
 --               "Data.Function",
-               "Control.Applicative",
-               "Control.Monad",
-               "Control.Monad.Cont",
-               "Control.Monad.Error",
-               "Control.Monad.Fix",
-               "Control.Monad.Identity",
-               "Control.Monad.Instances",
-               "Control.Monad.RWS",
-               "Control.Monad.Reader",
-               "Control.Monad.ST",
-               "Control.Monad.State",
-               "Control.Monad.State",
-               "Control.Monad.Writer",
-               "Data.Array",
-               "Data.Bits",
-               "Data.Bool",
-               "Data.Char",
-               "Data.Complex",
-               "Data.Dynamic",
-               "Data.Either",
-               "Data.Eq",
-               "Data.Fixed",
---               "Data.Graph",
-               "Data.Int",
-               "Data.Ix",
-               "Data.List",
-               "Data.Maybe",
-               "Data.Monoid",
-               "Data.Ord",
-               "Data.Ratio",
-               "Data.Tuple",
-               "Data.Typeable",
-               "Data.Word",
---               "System.Random",
---               "Test.QuickCheck",
---               "Text.PrettyPrint.HughesPJ",
---               "Text.Printf"
-               "Data.IntMap",
-               "Data.IntSet",
-               "Data.Map",
-               "Data.Set"
--- to avoid name clashes:
---             "Data.Traversable",
---             "Data.Foldable",
---             "Data.Zippable"
---             "Data.Sequence",
         ]
 
 data MyException = MyException String deriving (Typeable)
