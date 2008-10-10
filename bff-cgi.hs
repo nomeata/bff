@@ -29,15 +29,29 @@ page code pageContent =
 			
 	) +++
         form ! [method "POST", action "#"] << (
-		maindiv << p << (
-			"Enter the haskell definitions or load an example:" +++ br +++
-			concatHtml (map (\(name,thisCode) -> 
-				radio "load" name
-				! (if thisCode == code then [checked] else [])
-				+++ name +++ " "
-			) examples) +++ mkSubmit True Load +++ br +++
+		maindiv << (
+			 p << (
+				"Enter the Haskell function definitions or load an example. "+++
+				"You need to define " +++ tt << "source" +++ " and " +++
+				tt << "get" +++ ". The code is evaluated inside a " +++
+				tt << "let" +++ " block, so you can define functions by "+++
+				"pattern matching, but you can not define new data types. "+++				      "The type classses required by the "+++ tt << "Bff" +++
+				"functions are defined for " +++ tt << "Maybe" +++
+				", " +++ tt << "[]" +++ " and this simple tree type:" +++
+				pre << "data Tree a = Leaf a | Node (Tree a) (Tree a)" 
+			) +++
+
+			p << (
+				concatHtml (map (\(name,thisCode) -> 
+					radio "load" name
+					! (if thisCode == code then [checked] else [])
+					+++ name +++ " "
+				) examples) +++
+				mkSubmit True Load +++
+				br +++
+				textarea ! [name "code", cols "80", rows "10"] << code
+			) 
 			
-			textarea ! [name "code", cols "80", rows "10"] << code
 		) +++
  		pageContent
 	) +++
@@ -82,7 +96,7 @@ examples =
 		, ""
 		, "get = take 3 . sort . nub"
 		])
-	, ("repeat", unlines
+	, ("doubleList", unlines
 		[ "source = [1,2,8,3,4,4,3,2,1,0,0,8,0]"
 		, ""
 		, "get source = source ++ source"
@@ -113,8 +127,8 @@ submitCode Check = Nothing
 submitCode Load  = Nothing
 submitCode (Bff suffix) = Just ("bff"++suffix++" get source view")
 
-submitLabel Check = "Re-check type of get"
-submitLabel Load  = "Load"
+submitLabel Check = "Re-check types"
+submitLabel Load  = "Load example"
 submitLabel x   = fromJust (submitCode x)
 
 main = do setCurrentDirectory "/tmp"
@@ -181,15 +195,16 @@ cgiMain = do
 	let hasView = any (defines "view") (lines newCode)
 	
 	mbType <- liftIO $ catchInterpreterErrors (simpleTypeOf newCode "get")
+	mbTypeSrc <- liftIO $ catchInterpreterErrors (simpleTypeOf newCode "source")
         canBff <- liftIO $ either (const False) (const True) `fmap`
-			catchInterpreterErrors (simpleTypeOf newCode "bff get")
+			catchInterpreterErrors (simpleTypeOf newCode "bff get source")
         canBffEq <- liftIO $ either (const False) (const True) `fmap`
-			catchInterpreterErrors (simpleTypeOf newCode "bff_Eq get")
+			catchInterpreterErrors (simpleTypeOf newCode "bff_Eq get source")
         canBffOrd <- liftIO $ either (const False) (const True) `fmap`
-			catchInterpreterErrors (simpleTypeOf newCode "bff_Ord get")
+			catchInterpreterErrors (simpleTypeOf newCode "bff_Ord get source")
 
         outputFPS $ fromString $ showHtml $ page newCode $
-		p << typeInfo mbType canBff canBffEq canBffOrd +++
+		p << typeInfo mbType mbTypeSrc canBff canBffEq canBffOrd +++
 		maindiv << (
 			p << (
 				"You can use " +++ tt << "get source" +++ " to calculate "+++
@@ -206,14 +221,22 @@ cgiMain = do
 			maybe noHtml outputErrors errors
 		)
 		
-typeInfo (Left err) _ _ _ = p << 
-	"Your " +++ tt << "get" +++ " function does not typecheck:" +++ br +++
+typeInfo (Left err) _ _ _ _ = maindiv << p << (
+	"Your definitions do not typecheck:" +++ br +++
 	pre << err +++ br +++
-	mkSubmit True Check
+	mkSubmit True Check)
 
-typeInfo (Right getType) canBff canBffEq canBffOrd = maindiv << p << (
-	"Your getter has the type: " +++ tt << ("get :: " ++ getType) +++ br +++
-	"Therefore, a setter can be derived by " +++
+typeInfo _ (Left err) _ _ _ = maindiv << p << (
+	"Your definitions do not typecheck:" +++ br +++
+	pre << err +++ br +++
+	mkSubmit True Check)
+
+typeInfo (Right getType) (Right sourceType) canBff canBffEq canBffOrd = maindiv << (
+	p << (
+		"Your definitions have the types: " +++
+		pre << ("get :: " ++ getType ++ "\n"++
+		        "source :: " ++ sourceType) +++
+		"Therefore, a setter can be derived by " +++
 		case (canBff, canBffEq, canBffOrd) of
 			(True, _, _) -> 
 				tt << "bff" +++ ", " +++
@@ -223,11 +246,11 @@ typeInfo (Right getType) canBff canBffEq canBffOrd = maindiv << p << (
 				tt << "bff_Eq" +++ " and " +++
 				tt << "bff_Ord" +++ "."
 			(False, False, True) -> 
-				tt << "bff_Ord" +++ "only ."
+				tt << "bff_Ord " +++ "only."
 			(False, False, False) -> 
 				toHtml "none of the bff functions."
-		+++ br +++
-	mkSubmit True Check
+	) +++
+	p << mkSubmit True Check
 	)
 
 cssStyle = unlines 
@@ -246,6 +269,7 @@ cssStyle = unlines
         , "span.mono { font-family:monospace; }"
         , "pre { margin:10px; margin-left:20px; padding:10px;"
         , "          border:1px solid black; }"
+        , "textarea { margin:10px; margin-left:20px; padding:10px;  }"
         , "p { text-align:justify; }"
 	]
 

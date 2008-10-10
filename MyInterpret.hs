@@ -9,6 +9,7 @@ module MyInterpret
 
 -- import Mueval.Resources
 import Language.Haskell.Interpreter.GHC
+import Language.Haskell.Interpreter.GHC.Unsafe
 
 import Prelude hiding (catch)
 import Control.Concurrent
@@ -74,6 +75,8 @@ myInterpreter todo exp = timeoutIO $ do
                 reset
                 -- no need for temporary files I hope
                 setInstalledModsAreInScopeQualified True 
+	
+		unsafeSetGhcOption "-fno-monomorphism-restriction"
                 
                 -- liftIO $ Mueval.Resources.limitResources True
                 setImports modules
