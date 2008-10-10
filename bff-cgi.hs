@@ -4,26 +4,59 @@ import Network.CGI
 import Text.XHtml
 import Data.Maybe
 import Data.List
+import Data.ByteString.Lazy.UTF8 (fromString)
 
-page code content =
-       header << thetitle << "Bidirectionalization for Free -- Demo" +++
+page code pageContent =
+       header << (
+	thetitle << "Bidirectionalization for Free -- Demo" +++
+	style ! [ thetype "text/css" ] << cdata cssStyle
+       ) +++
        body << (
-        h1 << "Bidirectionalization for Free -- Demo" +++
-        p << "TODO: Describe and link stuff here" +++
+	thediv ! [theclass "top"] << (
+		thespan ! [theclass "title"] << "Haskell" +++
+		thespan ! [theclass "subtitle"] << "Bidirectionalization for Free"
+	) +++
+	maindiv << (
+        	p << ("This tools allows you to experiment with the automatic "+++
+                      "bidirectionalizer described in the paper “" +++
+		      hotlink "http://wwwtcs.inf.tu-dresden.de/~voigt/popl09-2.pdf"
+                        << "Bidirectionalization for Free!" +++
+		      "” by " +++
+		      hotlink "http://wwwtcs.inf.tu-dresden.de/~voigt/"
+                        << "Janis Voigtländer" +++
+	              "."
+		)
+			
+	) +++
         form ! [method "POST", action "#"] << (
-		p << (
-			strong << "Enter the haskell definitions or load an example:" +++ br +++
+		maindiv << p << (
+			"Enter the haskell definitions or load an example:" +++ br +++
 			concatHtml (map (\(name,thisCode) -> 
 				radio "load" name
 				! (if thisCode == code then [checked] else [])
 				+++ name +++ " "
 			) examples) +++ mkSubmit True Load +++ br +++
 			
-			textarea ! [name "code", cols "80", rows "15"] << code
-		) +++ content
+			textarea ! [name "code", cols "80", rows "10"] << code
+		) +++
+ 		pageContent
 	) +++
-        p << "TODO: Some Footer"
-       )
+        maindiv << (
+		p << (
+		"The code for this application and the Bidirectionalization "+++
+                "for Free library can be found in the darcs repository " +++
+		hotlink "http://darcs.nomeata.de/bff" << "http://darcs.nomeata.de/bff"+++
+		".") +++
+		p << ("© 2008 Joachim Breitner <" +++
+                      hotlink "mailto:mail@joachim-breitner.de" << "mail@joachim-breitner.de" +++
+		      ">")
+		)	
+	)
+       
+
+cdata s = primHtml ("<![CDATA[\n"++ s ++ "\n]]>")
+
+maindiv = thediv ! [theclass "main"]
         
 examples =
 	[ ("halve", unlines
@@ -37,12 +70,22 @@ examples =
 		, "flatten (Leaf a) = [a]"
 		, "flatten (Node t1 t2) = flatten t1 ++ flatten t2"
 		, ""
-		, "get source = take 3 (nub (flatten source))"
+		, "get source = flatten source"
 		])
 	, ("nodups", unlines
 		[ "source = [1,2,3,4,4,3,2,1,0,0,0]"
 		, ""
 		, "get source = nub source"
+		])
+	, ("top3", unlines
+		[ "source = [1,2,8,3,4,4,3,2,1,0,0,8,0]"
+		, ""
+		, "get = take 3 . sort . nub"
+		])
+	, ("repeat", unlines
+		[ "source = [1,2,8,3,4,4,3,2,1,0,0,8,0]"
+		, ""
+		, "get source = source ++ source"
 		])
 	]
 
@@ -72,7 +115,7 @@ submitCode (Bff suffix) = Just ("bff"++suffix++" get source view")
 
 submitLabel Check = "Re-check type of get"
 submitLabel Load  = "Load"
-submitLabel x   = "Evaluate \""++ fromJust (submitCode x) ++"\""
+submitLabel x   = fromJust (submitCode x)
 
 main = do setCurrentDirectory "/tmp"
           runCGI (handleErrors cgiMain)
@@ -102,7 +145,7 @@ defines (i:is) (x:xs) | i == x = defines is xs
 		   
 
 cgiMain = do
-        setHeader "Content-type" "text/xml"
+        setHeader "Content-type" "text/xml; charset=UTF-8"
 	
 	-- the next piece of code is not to be take seious
 	todo <- (fromMaybe Check . listToMaybe . catMaybes) `fmap`
@@ -114,12 +157,21 @@ cgiMain = do
         (newCode, errors) <- case submitCode todo of
 	  Just expr -> do
                 ret <- liftIO $ catchInterpreterErrors $ simpleInterpret code expr
-		return $ case ret of 
-		   Left err   -> (code, Just err)
-	           Right dat -> case todo of 
-                     (Bff suffix) -> (addDefiniton "result" dat code, Nothing)
-                     Get  ->         (addDefiniton "view"   dat
-					(delDefinition "result" code), Nothing)
+		return $ case (ret,todo) of 
+		   (Left err, Bff _)  ->
+			( delDefinition "result" code
+			, Just err)
+		   (Left err, Get)  ->
+			( delDefinition "result" $
+			  delDefinition "view" code
+			, Just err)
+		   (Right dat, Bff suffix)  ->
+                     	( addDefiniton "result" dat code
+			, Nothing)
+		   (Right dat, Get)  ->
+                     	( addDefiniton "view"   dat $
+			  delDefinition "result" code
+			, Nothing)
           Nothing -> case todo of
 		   Load -> do loadWhat <- getInput "load"
 			      return ( fromMaybe code $ loadWhat >>= flip lookup examples
@@ -136,20 +188,30 @@ cgiMain = do
         canBffOrd <- liftIO $ either (const False) (const True) `fmap`
 			catchInterpreterErrors (simpleTypeOf newCode "bff_Ord get")
 
-        output $ showHtml $ page newCode $
+        outputFPS $ fromString $ showHtml $ page newCode $
 		p << typeInfo mbType canBff canBffEq canBffOrd +++
-		p << mkSubmit True Get +++
-		p << mkSubmit (hasView && canBff) (Bff "") +++
-		p << mkSubmit (hasView && canBffEq) (Bff "_Eq") +++
-		p << mkSubmit (hasView && canBffOrd) (Bff "_Ord") +++
-		maybe noHtml outputErrors errors
+		maindiv << (
+			p << (
+				"You can use " +++ tt << "get source" +++ " to calculate "+++
+                                "a view which you can then modify. If you have defined "+++
+                                tt << "view" +++ ", then you can use the bidirectionalizer "+++
+                                "to calculate the updated source. The result will be shown "+++
+                                "in the code edit frame above." ) +++
+			p << ( "Evaluate " +++
+                               mkSubmit True Get +++ " " +++
+			       mkSubmit (hasView && canBff) (Bff "") +++" " +++
+			       mkSubmit (hasView && canBffEq) (Bff "_Eq") +++" " +++
+			       mkSubmit (hasView && canBffOrd) (Bff "_Ord")
+			) +++
+			maybe noHtml outputErrors errors
+		)
 		
 typeInfo (Left err) _ _ _ = p << 
 	"Your " +++ tt << "get" +++ " function does not typecheck:" +++ br +++
 	pre << err +++ br +++
 	mkSubmit True Check
 
-typeInfo (Right getType) canBff canBffEq canBffOrd = p << (
+typeInfo (Right getType) canBff canBffEq canBffOrd = maindiv << p << (
 	"Your getter has the type: " +++ tt << ("get :: " ++ getType) +++ br +++
 	"Therefore, a setter can be derived by " +++
 		case (canBff, canBffEq, canBffOrd) of
@@ -167,3 +229,23 @@ typeInfo (Right getType) canBff canBffEq canBffOrd = p << (
 		+++ br +++
 	mkSubmit True Check
 	)
+
+cssStyle = unlines 
+        [ "body { padding:0px; margin: 0px; }"
+        , "div.top { margin:0px; padding:10px; margin-bottom:20px;"
+        , "              background-color:#efefef;"
+        , "              border-bottom:1px solid black; }"
+        , "span.title { font-size:xx-large; font-weight:bold; }"
+        , "span.subtitle { padding-left:30px; font-size:large; }"
+        , "div.main { border:1px dotted black;"
+        , "                   padding:10px; margin:10px; }"
+        , "div.submain { padding:10px; margin:11px; }"
+        , "p.subtitle { font-size:large; font-weight:bold; }"
+        , "input.type { font-family:monospace; }"
+        , "input[type=\"submit\"] { font-family:monospace; background-color:#efefef; }"
+        , "span.mono { font-family:monospace; }"
+        , "pre { margin:10px; margin-left:20px; padding:10px;"
+        , "          border:1px solid black; }"
+        , "p { text-align:justify; }"
+	]
+
