@@ -8,6 +8,10 @@ import Control.Monad.Either
 -- import NormalizeData
 import Data.Zippable.Definition
 
+-- | A derivation that can be used with 'derive' from "Data.DeriveTH"
+--
+-- It supports algebraic types, including nested tuples and types. Not supported are
+-- function application and nested type aliases.
 makeZippable :: Derivation
 makeZippable = derivation zip' "Zippable"
 

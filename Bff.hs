@@ -1,4 +1,16 @@
 {-# OPTIONS_GHC -XRank2Types #-}
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Bff
+-- Copyright   :  (c) 2008 Janis Voigtländer
+-- 
+-- Maintainer  :  Janis Voigtländer
+-- Stability   :  experimental
+--
+-- This modules contains automatic bidirectionalizer, as described in the paper
+-- \"Bidirectionalization For Free\" by the same author.
+--
+-----------------------------------------------------------------------------
 
 module Bff (bff, bff_Eq, bff_Ord) where
 
@@ -53,6 +65,9 @@ checkInsert i b m =
                  then Right m 
                  else Left "Update violates equality."
 
+-- | Given an sufficiently general getter, that returns a view without looking at the
+--   values of the input data structure, this functions returns a setter that inserts
+--   an updated view back into the original data structure.
 bff :: (Traversable k, Zippable k', Foldable k') 
        => (forall a. k a -> k' a) 
           -> (forall a. Eq a => k a -> k' a -> k a)
@@ -84,6 +99,8 @@ assoc_Eq :: (Zippable k, Foldable k, Eq a)
 assoc_Eq = makeAssoc IntMapEq.checkInsert 
                      IntMapEq.empty
 
+-- | Works like 'bff', but can also handle getter functions that compare the elements
+--   of the source container using '==' or '/='.
 bff_Eq :: (Traversable k, Zippable k', Foldable k') 
           => (forall a. Eq a => k a -> k' a) 
              -> (forall a. Eq a => k a -> k' a -> k a)
@@ -112,6 +129,8 @@ assoc_Ord :: (Zippable k, Foldable k, Ord a)
 assoc_Ord = makeAssoc IntMapOrd.checkInsert 
                       IntMapOrd.empty
 
+-- | Works like 'bff', but can also handle getter functions that compare the elements
+--   using the 'Ord' typeclass.
 bff_Ord :: (Traversable k, Zippable k', Foldable k') 
            => (forall a. Ord a => k a -> k' a) 
               -> (forall a. Ord a => k a -> k' a -> k a)

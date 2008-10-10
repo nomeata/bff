@@ -13,11 +13,11 @@ library
         exposed-modules:
                 Data.SimpleTree
                 Data.Zippable
-                Data.Derive.Zippable
                 Data.IntMapEq
                 Data.IntMapOrd
                 Bff
         other-modules:
+                Data.Derive.Zippable
                 Data.Zippable.Definition
         build-depends:
                 base, containers, mtl, template-haskell, category-extras, derive,
