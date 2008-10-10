@@ -14,24 +14,27 @@ library
                 Data.SimpleTree
                 Data.Zippable
                 Data.Derive.Zippable
-                Bff
-                MyInterpret
-        other-modules:
-                Data.Zippable.Definition
                 Data.IntMapEq
                 Data.IntMapOrd
+                Bff
+        other-modules:
+                Data.Zippable.Definition
         build-depends:
                 base, containers, mtl, template-haskell, category-extras, derive,
-                haskell98, bimap, unix, hint
+                haskell98, bimap, unix
         
 executable bff-shell
         main-is:
                 bff-shell.hs
         build-depends:
-                base, directory
+                base, directory, hint
+        other-modules:
+                MyInterpret
 
 executable bff-cgi
         main-is:
                 bff-cgi.hs
         build-depends:
-                base, directory, xhtml, cgi
+                base, directory, xhtml, cgi, hint, utf8-string
+        other-modules:
+                MyInterpret
