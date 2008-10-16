@@ -12,7 +12,15 @@ cabal-version:  >= 1.2
 extra-source-files:
         QuickCheckTH.hs
         QuickCheck.hs
-	testcgi.py
+        testcgi.py
+
+flag binaries
+        description: Build the binaries bff-shell and bff-cgi
+        default: False
+
+flag stats
+        description: Build the stats-generating program
+        default: False
 
 library
         exposed-modules:
@@ -31,21 +39,38 @@ library
 executable bff-shell
         main-is:
                 bff-shell.hs
-        build-depends:
-                base, directory, hint
         other-modules:
                 MyInterpret
+        if flag(binaries)
+                build-depends:
+                        base, directory, hint
+                buildable: True 
+        else
+                buildable: False
 
 executable bff-cgi
+        buildable: False 
         main-is:
                 bff-cgi.hs
-        build-depends:
-                base, directory, xhtml, cgi, hint, utf8-string
         other-modules:
                 MyInterpret
+        if flag(binaries)
+                build-depends:
+                        base, directory, xhtml, cgi, hint, utf8-string
+                buildable: True 
+        else
+                buildable: False
 
 executable bff-stats
         main-is:
                 Stats.hs
         other-modules:
                 Bff'
+        if flag(stats)
+                buildable: True 
+                build-depends:
+                        Chart >= 0.8
+                        , benchpress >= 0.2.2.2
+        else
+                buildable: False
+
