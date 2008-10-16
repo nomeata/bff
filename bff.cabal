@@ -1,7 +1,15 @@
 name:           bff
 version:        0.1
+license:        PublicDomain
+description:
+        This is an implementation of the ideas presented in “Bidirectionalization
+        For Free” from the same author.
+        .
+        It also includes an automatic deriver for the Zippable type class.
 
-author:         Janis Voigtländer
+author:         Janis Voigtländer, Joachim Breitner
+
+maintainer:     Janis Voigtländer
 
 category:       Development, Language
 synopsis:       Bidirectionalization for free
