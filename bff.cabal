@@ -9,6 +9,11 @@ synopsis:       Bidirectionalization for free
 build-type:     Simple
 cabal-version:  >= 1.2
 
+extra-source-files:
+	QuickCheckTH.hs
+	QuickCheck.hs
+
+
 library
         exposed-modules:
                 Data.SimpleTree
