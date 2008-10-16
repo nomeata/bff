@@ -10,9 +10,9 @@ build-type:     Simple
 cabal-version:  >= 1.2
 
 extra-source-files:
-	QuickCheckTH.hs
-	QuickCheck.hs
-
+        QuickCheckTH.hs
+        QuickCheck.hs
+	testcgi.py
 
 library
         exposed-modules:
@@ -43,3 +43,9 @@ executable bff-cgi
                 base, directory, xhtml, cgi, hint, utf8-string
         other-modules:
                 MyInterpret
+
+executable bff-stats
+        main-is:
+                Stats.hs
+        other-modules:
+                Bff'
