@@ -6,6 +6,13 @@ description:
         For Free” from the same author.
         .
         It also includes an automatic deriver for the Zippable type class.
+        .
+        Using the cabal flag “binaries” will enable the creation of a web frontend
+        to bff, in the form of a CGI program. Make sure you understand the
+        securty implications before allowing untrusted access to the script.
+        .
+        Using the cabal flag “stats” will generate a progra that collects performance
+        statistics about bff and render them as PNG or PDF files.
 
 author:         Janis Voigtländer, Joachim Breitner
 
