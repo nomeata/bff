@@ -1,9 +1,8 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.IntMapOrd
--- Copyright   :  (c) 2008 Janis Voigtländer
 -- 
--- Maintainer  :  Janis Voigtländer
+-- Maintainer  :  Janis Voigtlaender
 -- Stability   :  experimental
 --
 -- A variant of the regular 'Data.IntMap', enforcing that the map is monotonous
@@ -44,7 +43,7 @@ memberR :: Ord a => a -> IntMapOrd a -> Bool
 memberR a (IntMapOrd m) = Bimap.memberR a m
 
 -- | /O(n)/.  Build a map from a list of pairs, where
--- both the fst and snd halves of the list are in strictly ascending order.
+-- both the fst and snd parts of the list are in strictly ascending order.
 -- 
 -- This precondition is not checked; an invalid list will produce a malformed map. 
 fromAscPairList :: Ord a => [(Int,a)] -> IntMapOrd a
@@ -71,7 +70,7 @@ insert k a (IntMapOrd m) = let (m1,m2) = Map.split k (Bimap.toMap m)
 --
 --  * Inserting a key with a value that already exists for another key.
 --
---  * Inserting a key\/value pair that breaks the monotonicity invarant.
+--  * Inserting a key\/value pair that breaks the monotonicity invariant.
 checkInsert :: Ord a => Int -> a -> IntMapOrd a -> Either String (IntMapOrd a)
 checkInsert i b m = case lookup i m of
                       Nothing -> if memberR b m
@@ -82,8 +81,8 @@ checkInsert i b m = case lookup i m of
                                    else Left "Update violates equality."
 
 -- | /O(n * log n)/. The union of two maps. It prefers the first map
--- when duplicate keys are encountered. If the monotonicity invarant is violated,
--- an error is signaled with a 'Left' return value.
+-- when duplicate keys are encountered. If the monotonicity invariant is violated,
+-- an error is signalled with a 'Left' return value.
 union :: Ord a => IntMapOrd a -> IntMapOrd a -> Either String (IntMapOrd a)
 union h (IntMapOrd m) = Bimap.fold f (Right h) m
   where f k a (Right h) = if member k h 

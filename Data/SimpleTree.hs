@@ -1,10 +1,9 @@
-{-# OPTIONS_GHC  -XTemplateHaskell -XFlexibleInstances -XFlexibleContexts -fallow-undecidable-instances  #-}
+{-# OPTIONS_GHC  -XTemplateHaskell  #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.SimpleTree
--- Copyright   :  (c) 2008 Janis Voigtländer
 -- 
--- Maintainer  :  Janis Voigtländer
+-- Maintainer  :  Janis Voigtlaender
 -- Stability   :  experimental
 --
 -- A very simple binary Tree data structure.

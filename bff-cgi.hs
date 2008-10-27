@@ -8,20 +8,20 @@ import Data.ByteString.Lazy.UTF8 (fromString)
 
 page code pageContent =
        header << (
-	thetitle << "Bidirectionalization for Free -- Demo" +++
+	thetitle << "Bidirectionalization for Free! -- Demo" +++
 	style ! [ thetype "text/css" ] << cdata cssStyle
        ) +++
        body << (
 	thediv ! [theclass "top"] << (
 		thespan ! [theclass "title"] << "Haskell" +++
-		thespan ! [theclass "subtitle"] << "Bidirectionalization for Free"
+		thespan ! [theclass "subtitle"] << "Bidirectionalization for Free!"
 	) +++
 	maindiv << (
-        	p << ("This tools allows you to experiment with the automatic "+++
-                      "bidirectionalizer described in the paper “" +++
+        	p << ("This tool allows you to experiment with the "+++
+                      "method described in the paper “" +++
 		      hotlink "http://wwwtcs.inf.tu-dresden.de/~voigt/popl09-2.pdf"
                         << "Bidirectionalization for Free!" +++
-		      "” by " +++
+		      "” (POPL'09) by " +++
 		      hotlink "http://wwwtcs.inf.tu-dresden.de/~voigt/"
                         << "Janis Voigtländer" +++
 	              "."
@@ -35,9 +35,8 @@ page code pageContent =
 				"You need to define " +++ tt << "source" +++ " and " +++
 				tt << "get" +++ ". The code is evaluated inside a " +++
 				tt << "let" +++ " block, so you can define functions by "+++
-				"pattern matching, but you can not define new data types. "+++				      "The type classses required by the "+++ tt << "Bff" +++
-				"functions are defined for " +++ tt << "Maybe" +++
-				", " +++ tt << "[]" +++ " and this simple tree type:" +++
+				"pattern matching, but you cannot define new data types. "+++				      "The type classes required by the bidirectionalization functions are defined for " +++ tt << "Maybe" +++
+				", " +++ tt << "[]" +++ ", and this simple tree type:" +++
 				pre << "data Tree a = Leaf a | Node (Tree a) (Tree a)" 
 			) +++
 
@@ -57,9 +56,8 @@ page code pageContent =
 	) +++
         maindiv << (
 		p << (
-		"The code for this application and the Bidirectionalization "+++
-                "for Free library can be found in the darcs repository " +++
-		hotlink "http://darcs.nomeata.de/bff" << "http://darcs.nomeata.de/bff"+++
+		"The source code of this application and the underlying library can be found " +++
+		hotlink "http://hackage.haskell.org/cgi-bin/hackage-scripts/package/bff" << "here"+++
 		".") +++
 		p << ("© 2008 Joachim Breitner <" +++
                       hotlink "mailto:mail@joachim-breitner.de" << "mail@joachim-breitner.de" +++
@@ -76,30 +74,46 @@ examples =
 	[ ("halve", unlines
 		[ "source = [1,2,3,4,5,6,7,8,9,10]"
 		, ""
-		, "get source = take (length source `div` 2) source"
+		, "get as = take (length as `div` 2) as"
 		])
 	, ("flatten", unlines
-		[ "source = Node (Node (Leaf 1) (Node (Node (Leaf 2) (Leaf 4)) (Leaf 2))) (Leaf 3)" 
+		[ "source = Node (Leaf 'a') (Leaf 'b')" 
 		, ""
-		, "flatten (Leaf a) = [a]"
-		, "flatten (Node t1 t2) = flatten t1 ++ flatten t2"
-		, ""
-		, "get source = flatten source"
+		, "get (Leaf a) = [a]"
+		, "get (Node t1 t2) = get t1 ++ get t2"
 		])
 	, ("nodups", unlines
-		[ "source = [1,2,3,4,4,3,2,1,0,0,0]"
+		[ "source = \"abcbabcbaccba\""
 		, ""
-		, "get source = nub source"
+		, "get = List.nub"
 		])
 	, ("top3", unlines
-		[ "source = [1,2,8,3,4,4,3,2,1,0,0,8,0]"
+		[ "source = \"transformation\""
 		, ""
-		, "get = take 3 . sort . nub"
+		, "get = take 3 . List.sort . List.nub"
+		])
+	, ("tail", unlines
+		[ "source = \"abcd\""
+		, ""
+		, "get = tail"
+		])
+	, ("sieve", unlines
+		[ "source = \"abcdefg\""
+		, ""
+		, "get (a:b:cs) = b:get cs"
+		, "get _        = []"
 		])
 	, ("doubleList", unlines
-		[ "source = [1,2,8,3,4,4,3,2,1,0,0,8,0]"
+		[ "source = \"a\""
 		, ""
-		, "get source = source ++ source"
+		, "get = (\\s -> s ++ s)"
+		])
+	, ("tail/nodups", unlines
+		[ "source = \"abcbabcbaccba\""
+		, ""
+                , "nodups = List.nub"
+                , ""
+		, "get = tail . nodups"
 		])
 	]
 
@@ -233,22 +247,22 @@ typeInfo _ (Left err) _ _ _ = maindiv << p << (
 
 typeInfo (Right getType) (Right sourceType) canBff canBffEq canBffOrd = maindiv << (
 	p << (
-		"Your definitions have the types: " +++
+		"Your definitions have the following types: " +++
 		pre << ("get :: " ++ getType ++ "\n"++
 		        "source :: " ++ sourceType) +++
-		"Therefore, a setter can be derived by " +++
+		"Therefore, an updater can be derived by " +++
 		case (canBff, canBffEq, canBffOrd) of
 			(True, _, _) -> 
 				tt << "bff" +++ ", " +++
-				tt << "bff_Eq" +++ " and " +++
+				tt << "bff_Eq" +++ ", and " +++
 				tt << "bff_Ord" +++ "."
 			(False, True, _) -> 
 				tt << "bff_Eq" +++ " and " +++
 				tt << "bff_Ord" +++ "."
 			(False, False, True) -> 
-				tt << "bff_Ord " +++ "only."
+				tt << "bff_Ord" +++ " only."
 			(False, False, False) -> 
-				toHtml "none of the bff functions."
+				"none of the " +++ tt << "bff" +++ " functions."
 	) +++
 	p << mkSubmit True Check
 	)

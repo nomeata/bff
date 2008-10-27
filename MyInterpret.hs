@@ -23,7 +23,7 @@ import Data.Either
 
 
 -- Scoped modules
-modules = [    "Bff",
+modules = [    "Data.Bff",
 	       "Data.SimpleTree",
                "Prelude",
                "Data.List"

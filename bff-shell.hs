@@ -20,5 +20,5 @@ main =  (=<<) (either putStrLn return) $ catchInterpreterErrors $ do
 	putStrLn "Please enter modified view"
 	view <- getLine
 
-	putStrLn "Running \"bff source get view\""
-	simpleInterpret ("source = " ++ source ++ "\nget s = " ++ getter  ++ "\nview s = " ++ view ) "get source" >>= putStrLn
+	putStrLn "Running \"bff get source view\""
+	simpleInterpret ("source = " ++ source ++ "\nget s = " ++ getter  ++ "\nview = " ++ view ) "bff get source view" >>= putStrLn

@@ -4,8 +4,7 @@
 
 import Test.BenchPress
 import Control.Exception (evaluate)
-import Bff
-import qualified Bff' as MapBff
+import Data.Bff
 import Control.Applicative
 import Control.Monad.Writer
 import Control.Monad.State
@@ -25,28 +24,25 @@ import Data.Maybe
 import Text.Printf
 import Graphics.Rendering.Chart
 import System.IO
+import List
 
 -------------------
 -- Configuration --
 -------------------
 
-sizes = (\n -> [0,(n`div`10)..n]) 100000
-repetitions = 1
+sizes = (\n -> [0,(n`div`100)..n]) 100000
+repetitions = 3
 tests_to_run = do
           runTest test1
-          runTest test1'
 	  runTest test2
-{-	  runTest test2'
 	  runTest test3
-	  runTest test4 -}
+	  runTest test4
+	  runTest test5
 
 ----------------------
 -- Test definitions --
 ----------------------
 
---
--- Test 1
---
 data Test c c' a = Test
 	{ testName    :: String
 	, genTestCase :: Int  -> c  a
@@ -54,95 +50,109 @@ data Test c c' a = Test
 	, putTestMan  :: c a  -> c' a -> c a
 	, putTestAuto :: c a  -> c' a -> c a
         , modifyTest  :: c' a -> c' a
+        , scale       :: Double -> Int -> Double
 	}
+
+--
+-- Test 1
+--
 
 test1 = Test
-	{ testName    = "Halve (IntMap)"
+	{ testName    = "halve, scaled"
 	, genTestCase = \n -> [1..n]
-	, getTest     = get 
-	, putTestMan  = \as as' -> as' ++ drop (length as `div` 2) as
-	, putTestAuto = bff get
-	, modifyTest  = pairDance
+	, getTest     = halve 
+	, putTestMan  = put1
+	, putTestAuto = bff halve
+	, modifyTest  = id
+        , scale       = \m s -> m / fromIntegral s
 	}
-  where get :: [a] -> [a]
-        get as = take (length as `div` 2) as
 
--- regular Map variant
-test1' = test1
-	{ testName    = "Halve (Map)"
-	, putTestAuto = MapBff.bff get
-	}
-  where get :: [a] -> [a]
-        get as = take (length as `div` 2) as
+halve :: [a] -> [a]
+halve as = take (length as `div` 2) as
+
+put1 :: [a] -> [a] -> [a]
+put1 as as' | length as' == n
+            = as' ++ drop n as
+              where n = length as `div` 2 
 
 --
 -- Test 2
 --
 
 test2 = Test
-	{ testName   = "Flatten"
-	, genTestCase = fix (\loop n -> if n <= 1
+	{ testName    = "flatten, left-leaning"
+	, genTestCase = fix (\loop n -> if n == 1
                                         then Leaf ()
-                                        else Node (loop (n`div`2)) (loop (n - (n`div`2))))
-	, getTest     = get
-	, putTestMan  = \s v -> flip evalState v $
-				    T.mapM (\_ -> do new <- gets head
-						     modify tail
-						     return new) s
-	, putTestAuto = bff get
-	, modifyTest  = pairDance
+                                        else Node (loop (n-1)) (Leaf ()))
+	, getTest     = flatten
+	, putTestMan  = put2
+	, putTestAuto = bff flatten
+	, modifyTest  = id
+        , scale       = const
 	}
-  where get :: Tree a -> [a]
- 	get = execWriter . T.mapM (tell . (:[])) 
 
--- regular Map variants
-test2' = test2
-	{ testName   = "Flatten (Map)"
-	, putTestAuto = MapBff.bff get
-	}
-  where get :: Tree a -> [a]
- 	get = execWriter . T.mapM (tell . (:[]))
+flatten :: Tree a -> [a]
+flatten (Leaf a)     = [a]
+flatten (Node t1 t2) = flatten t1 ++ flatten t2
+
+put2 :: Tree a -> [a] -> Tree a
+put2 s v = case go s v of (t,[]) -> t
+  where go (Leaf a) (b:bs) = (Leaf b,bs)
+        go (Node s1 s2) bs = (Node t1 t2,ds)
+          where (t1,cs) = go s1 bs
+                (t2,ds) = go s2 cs
 
 --
 -- Test 3
 --
-test3 :: Test [] [] Int
+
 test3 = Test
-	{ testName   = "nub"
-	, genTestCase = fix (\loop n -> if n <= 1
-                                        then [] else
-                                        [1..n`div`2] ++ loop (n - (n`div`2)))
-	, getTest     = get
-	, putTestMan  = \s v -> let mapping = zip (get s) v
-                                in  map (\x -> fromMaybe x (lookup x mapping)) s
-	, putTestAuto = bff_Eq get
-	, modifyTest  = pairDance
+	{ testName    = "flatten, right-leaning"
+	, genTestCase = fix (\loop n -> if n == 1
+                                        then Leaf ()
+                                        else Node (Leaf ()) (loop (n-1)))
+	, getTest     = flatten
+	, putTestMan  = put2
+	, putTestAuto = bff flatten
+	, modifyTest  = id
+        , scale       = const
 	}
-  where get :: Eq a => [a] -> [a]
- 	get = nub
 
 --
 -- Test 4
 --
-test4 :: Test [] [] Int
-test4 = Test
-	{ testName    = "Top ten"
-	, genTestCase = fix (\loop n -> if n <= 1
-                                        then [] else
-                                        [1..n`div`2] ++ loop (n - (n`div`2)))
-	, getTest     = get 
-	, putTestMan  = \s v -> let mapping = zip (get s) v
-                                in  map (\x -> fromMaybe x (lookup x mapping)) s
-	, putTestAuto = bff_Ord get
-	, modifyTest  = map (+10)
-	}
-  where get :: Ord a => [a] -> [a]
- 	get = take 10 . reverse . sort . nub
 
-pairDance :: [a] -> [a]
-pairDance [] = []
-pairDance [x] = [x]
-pairDance (a:b:r) = (b:a:pairDance r)
+test4 = Test
+	{ testName    = "nodups, all unequal"
+	, genTestCase = \n -> [1..n]
+	, getTest     = nodups
+	, putTestMan  = put3
+	, putTestAuto = bff_Eq nodups
+	, modifyTest  = id
+        , scale       = const
+	}
+
+nodups :: Eq a => [a] -> [a]
+nodups = List.nub
+
+put3 :: Eq a => [a] -> [a] -> [a]
+put3 s v | v == List.nub v && length v == length s'
+         = map (fromJust . flip lookup (zip s' v)) s
+           where s' = List.nub s
+
+--
+-- Test 5
+--
+
+test5 = Test
+	{ testName    = "nodups, all equal"
+	, genTestCase = \n -> map (const 0) [1..n]
+	, getTest     = nodups
+	, putTestMan  = put3
+	, putTestAuto = bff_Eq nodups
+	, modifyTest  = id
+        , scale       = const
+	}
 
 ----------------------------------
 -- Stats calculation and output --
@@ -151,7 +161,7 @@ pairDance (a:b:r) = (b:a:pairDance r)
 stats test putter size = (mean . fst) `fmap` benchmark repetitions
 		(do let source = genTestCase test size
 		        view   = getTest test source
-                        view'   = modifyTest test view
+                        view'  = modifyTest test view
                     deepEvaluate (source, view')
                 )
 		(\_ -> return ())
@@ -180,7 +190,7 @@ tabelize table = unlines (map padLine table)
         pad w s = replicate (w - length s) ' ' ++ s
 	padLine ss = intercalate "|" (zipWith pad colWidths ss)
 
-putGraph test statData filename = renderableToPNGFile r 800 400 filename
+putGraph test statData filename = renderableToPDFFile r 800 400 filename
   where r = toRenderable $
 		defaultLayout1
 		{ layout1_title = "Test \"" ++ testName test ++"\""
@@ -208,7 +218,7 @@ putGraph test statData filename = renderableToPNGFile r 800 400 filename
 				}))
 		}
         (manualData, automaticData) = unzip $ map f statData
-	f (s, m, a) = (Point (fromIntegral s) (m/fromIntegral s), Point (fromIntegral s) (a/fromIntegral s))
+	f (s, m, a) = (Point (fromIntegral s) (scale test m s), Point (fromIntegral s) (scale test a s))
 
 runTest :: (Show (c v), Show (c' v), F.Foldable c', Zippable c', Traversable c, Eq v) =>
            Test c c' v -> IO ()
@@ -218,7 +228,7 @@ runTest test = do
 	  statData <- collectStats test
           putStrLn $ ""
 	  putTable statData
-	  let graphFileName = testName test ++ ".png"
+	  let graphFileName = testName test ++ ".pdf"
 	  putStrLn $ "Writing graph to " ++ graphFileName
 	  putGraph test statData graphFileName
 

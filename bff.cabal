@@ -2,24 +2,24 @@ name:           bff
 version:        0.1
 license:        PublicDomain
 description:
-        This is an implementation of the ideas presented in “Bidirectionalization
-        For Free” from the same author.
+        This is an implementation of the ideas presented in "Bidirectionalization
+        for Free!" (paper at POPL'09) by Janis Voigtlaender.
         .
         It also includes an automatic deriver for the Zippable type class.
         .
-        Using the cabal flag “binaries” will enable the creation of a web frontend
+        Using the cabal flag "binaries" will enable the creation of a web frontend
         to bff, in the form of a CGI program. Make sure you understand the
-        securty implications before allowing untrusted access to the script.
+        security implications before allowing untrusted access to the script.
         .
-        Using the cabal flag “stats” will generate a progra that collects performance
+        Using the cabal flag "stats" will generate a program that collects performance
         statistics about bff and render them as PNG or PDF files.
 
-author:         Janis Voigtländer, Joachim Breitner
+author:         Janis Voigtlaender, Joachim Breitner
 
-maintainer:     Janis Voigtländer
+maintainer:     Janis Voigtlaender
 
 category:       Development, Language
-synopsis:       Bidirectionalization for free
+synopsis:       Bidirectionalization for Free
 
 build-type:     Simple
 cabal-version:  >= 1.2
@@ -43,13 +43,13 @@ library
                 Data.Zippable
                 Data.IntMapEq
                 Data.IntMapOrd
-                Bff
+                Data.Bff
         other-modules:
                 Data.Derive.Zippable
                 Data.Zippable.Definition
         build-depends:
-                base, containers, mtl, template-haskell, category-extras, derive,
-                haskell98, bimap, unix
+                base, containers, mtl, template-haskell, category-extras == 0.53.5, derive == 0.1.1,
+                haskell98, bimap == 0.2.3, unix
         
 executable bff-shell
         main-is:
@@ -64,7 +64,6 @@ executable bff-shell
                 buildable: False
 
 executable bff-cgi
-        buildable: False 
         main-is:
                 bff-cgi.hs
         other-modules:
@@ -79,8 +78,6 @@ executable bff-cgi
 executable bff-stats
         main-is:
                 Stats.hs
-        other-modules:
-                Bff'
         if flag(stats)
                 buildable: True 
                 build-depends:
@@ -88,4 +85,3 @@ executable bff-stats
                         , benchpress >= 0.2.2.2
         else
                 buildable: False
-

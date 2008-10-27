@@ -1,12 +1,11 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.IntMapEq
--- Copyright   :  (c) 2008 Janis Voigtländer
 -- 
--- Maintainer  :  Janis Voigtländer
+-- Maintainer  :  Janis Voigtlaender
 -- Stability   :  experimental
 --
--- A variant of the regular 'Data.IntMap', enforcing that the map is injectiv (up to '==').
+-- A variant of the regular 'Data.IntMap', enforcing injectivity (up to '==').
 --
 -- As with 'Data.IntMap', many operations have a worst-case complexity of /O(min(n,W))/.
 -- This means that the operation can become linear in the number of elements with a
