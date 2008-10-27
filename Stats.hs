@@ -59,7 +59,7 @@ data Test c c' a = Test
 
 test1 = Test
 	{ testName    = "halve, scaled"
-	, genTestCase = \n -> [1..n]
+	, genTestCase = \n -> [0..n]
 	, getTest     = halve 
 	, putTestMan  = put1
 	, putTestAuto = bff halve
@@ -81,7 +81,7 @@ put1 as as' | length as' == n
 
 test2 = Test
 	{ testName    = "flatten, left-leaning"
-	, genTestCase = fix (\loop n -> if n == 1
+	, genTestCase = fix (\loop n -> if n == 0
                                         then Leaf ()
                                         else Node (loop (n-1)) (Leaf ()))
 	, getTest     = flatten
@@ -108,7 +108,7 @@ put2 s v = case go s v of (t,[]) -> t
 
 test3 = Test
 	{ testName    = "flatten, right-leaning"
-	, genTestCase = fix (\loop n -> if n == 1
+	, genTestCase = fix (\loop n -> if n == 0
                                         then Leaf ()
                                         else Node (Leaf ()) (loop (n-1)))
 	, getTest     = flatten
@@ -124,7 +124,7 @@ test3 = Test
 
 test4 = Test
 	{ testName    = "nodups, all unequal"
-	, genTestCase = \n -> [1..n]
+	, genTestCase = \n -> [0..n]
 	, getTest     = nodups
 	, putTestMan  = put3
 	, putTestAuto = bff_Eq nodups
@@ -146,7 +146,7 @@ put3 s v | v == List.nub v && length v == length s'
 
 test5 = Test
 	{ testName    = "nodups, all equal"
-	, genTestCase = \n -> map (const 0) [1..n]
+	, genTestCase = \n -> map (const 0) [0..n]
 	, getTest     = nodups
 	, putTestMan  = put3
 	, putTestAuto = bff_Eq nodups
