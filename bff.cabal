@@ -78,10 +78,33 @@ executable bff-cgi
 executable bff-stats
         main-is:
                 Stats.hs
+        other-modules:
+                StatsDef
+        if flag(stats)
+                buildable: True 
+                build-depends:
+                        benchpress >= 0.2.2.2
+        else
+                buildable: False
+
+executable bff-stats-print
+        main-is:
+                StatsPrint.hs
+        other-modules:
+                StatsDef
+        if flag(stats)
+                buildable: True 
+        else
+                buildable: False
+
+executable bff-stats-render
+        main-is:
+                StatsRender.hs
+        other-modules:
+                StatsDef
         if flag(stats)
                 buildable: True 
                 build-depends:
                         Chart >= 0.8
-                        , benchpress >= 0.2.2.2
         else
                 buildable: False

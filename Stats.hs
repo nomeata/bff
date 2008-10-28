@@ -9,7 +9,7 @@ import Control.Applicative
 import Control.Monad.Writer
 import Control.Monad.State
 import Control.Monad.Fix
-import Data.Traversable hiding (mapM)
+import Data.Traversable hiding (mapM, sequence)
 import qualified Data.Traversable as T
 import qualified Data.Foldable as F 
 import Data.Zippable
@@ -22,9 +22,9 @@ import Prelude
 import Data.Ord
 import Data.Maybe
 import Text.Printf
-import Graphics.Rendering.Chart
 import System.IO
 import List
+import StatsDef
 
 -------------------
 -- Configuration --
@@ -32,12 +32,13 @@ import List
 
 sizes = (\n -> [0,(n`div`100)..n]) 100000
 repetitions = 3
-tests_to_run = do
-          runTest test1
-	  runTest test2
-	  runTest test3
-	  runTest test4
-	  runTest test5
+tests_to_run =
+	[ runTest test1
+	, runTest test2
+	, runTest test3
+	, runTest test4
+	, runTest test5
+	]
 
 ----------------------
 -- Test definitions --
@@ -171,72 +172,32 @@ stats test putter size = (mean . fst) `fmap` benchmark repetitions
 deepEvaluate :: Show a => a -> IO a
 deepEvaluate x = evaluate (length (show x)) >> return x
 
+collectStats :: (Show (c a), Show (c' a)) => Test c c' a -> IO StatRunData
 collectStats test = mapM (\size -> do
 		putStr "."
 		manual <- stats test putTestMan size
 		putStr "."
 	        automatic <- stats test putTestAuto size
 		putStr " "
-                return (size, manual, automatic)
+                return (size, scale test manual size, scale test automatic size)
 	) sizes
 
-putTable statData = putStr (tabelize stringData)
-  where stringData = ["Size","Manual Getter", "Automatic Getter"] :
-                     map (\(s,m,a) -> [show s, printf "%.3f" m, printf "%.3f" a]) statData
-
-tabelize :: [[String]] -> String
-tabelize table = unlines (map padLine table)
-  where colWidths = map (maximum . map length) (transpose table)
-        pad w s = replicate (w - length s) ' ' ++ s
-	padLine ss = intercalate "|" (zipWith pad colWidths ss)
-
-putGraph test statData filename = renderableToPDFFile r 800 400 filename
-  where r = toRenderable $
-		defaultLayout1
-		{ layout1_title = "Test \"" ++ testName test ++"\""
-		, layout1_plots = [
-			("Manual Getter", HA_Bottom, VA_Left,
-				toPlot $ defaultPlotLines 
-					{ plot_lines_values = [manualData]
-					, plot_lines_style = solidLine 1 (Color 0 0 1)
-					}
-			),
-			("Automatic Getter", HA_Bottom, VA_Left,
-				toPlot $ defaultPlotLines 
-					{ plot_lines_values = [automaticData]
-					, plot_lines_style = solidLine 1 (Color 1 0 0)
-					}
-			)
-			]
-		, layout1_vertical_axes = 
-			linkedAxes' (autoScaledAxis (defaultAxis {axis_title =
-					"Average time per test in ms"
-				}))
-		, layout1_horizontal_axes = 
-			linkedAxes' (autoScaledAxis (defaultAxis {axis_title =
-					"Size of input data structure"
-				}))
-		}
-        (manualData, automaticData) = unzip $ map f statData
-	f (s, m, a) = (Point (fromIntegral s) (scale test m s), Point (fromIntegral s) (scale test a s))
-
 runTest :: (Show (c v), Show (c' v), F.Foldable c', Zippable c', Traversable c, Eq v) =>
-           Test c c' v -> IO ()
+           Test c c' v -> IO (String, StatRunData)
 runTest test = do
 	  putStrLn $ "" 
 	  putStr   $ "Test \"" ++ testName test ++ "\" "
 	  statData <- collectStats test
           putStrLn $ ""
-	  putTable statData
-	  let graphFileName = testName test ++ ".pdf"
-	  putStrLn $ "Writing graph to " ++ graphFileName
-	  putGraph test statData graphFileName
+	  return (testName test, statData)
 
 main = do hSetBuffering stdout NoBuffering
 	  putStrLn $ "Bff benchmarking program"
           putStrLn $ "(c) 2008 Joachim Breitner"
 	  putStrLn $ "Repeating every test " ++ show repetitions ++ " times."
-	  tests_to_run
+	  rawData <- sequence tests_to_run
+	  putStrLn $ "Writing data to stats.data"
+	  writeFile "stats.data" (show rawData)
 
 -- Data Definition
 data Tree a = Leaf a | Node (Tree a) (Tree a) deriving Show
