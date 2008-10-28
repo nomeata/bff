@@ -49,7 +49,7 @@ library
                 Data.Zippable.Definition
         build-depends:
                 base, containers, mtl, template-haskell, category-extras == 0.53.5, derive == 0.1.1,
-                haskell98, bimap == 0.2.3, unix
+                haskell98, bimap == 0.2.3 || == 0.2.4, unix
         
 executable bff-shell
         main-is:
