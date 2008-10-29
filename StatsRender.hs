@@ -16,13 +16,13 @@ putGraph name statData filename = renderableToPDFFile r 600 400 filename
 			("manual (put)", HA_Bottom, VA_Left,
 				toPlot $ defaultPlotLines 
 					{ plot_lines_values = [manualData]
-					, plot_lines_style = solidLine 1 (Color 0 0 0)
+					, plot_lines_style  = dashedLine 1 [4,4] (Color 0 0 0)
 					}
 			),
 			("automatic (bff get)", HA_Bottom, VA_Left,
 				toPlot $ defaultPlotLines 
 					{ plot_lines_values = [automaticData]
-					, plot_lines_style = dashedLine 1 [10,10] (Color 0 0 0)
+					, plot_lines_style  = solidLine 1 (Color 0 0 0)
 					}
 			)
 			]
@@ -47,6 +47,4 @@ printTest name statData = do
 
 main = do cont <- readFile "stats.data"
 	  mapM_ (uncurry printTest) (read cont)
-
-
 
