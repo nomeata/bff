@@ -8,7 +8,7 @@ import Data.List
 import StatsDef
 
 
-putGraph name statData filename = renderableToPDFFile r 600 400 filename
+putGraph name statData filename = renderableToPDFFile r 600 300 filename
   where r = toRenderable $
 		defaultLayout1
 		{ layout1_title = "Measurements \"" ++ name ++"\""
