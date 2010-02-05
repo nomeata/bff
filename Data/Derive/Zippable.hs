@@ -15,7 +15,7 @@ import Data.Zippable.Definition
 makeZippable :: Derivation
 makeZippable = derivation zip' "Zippable"
 
-zip' dat | (dataArity dat) /= 1 = error "Can not handle types with artity not zero."
+zip' dat | (dataArity dat) /= 1 = error "Cannot handle types with arity not one."
          | otherwise            =
 	   let typeName | dataName dat == "[]" = ConT ''[] -- doesn’t work!
                         | otherwise            = lK (dataName dat) []
@@ -25,7 +25,7 @@ zip' dat | (dataArity dat) /= 1 = error "Can not handle types with artity not ze
 			whenP (length (dataCtors dat) > 1)
                               [Clause [WildP, WildP, WildP]
                                   (NormalB (app (VarE 'throwCError) [LitE (StringL
-						"Structure mismatch in tryZip"
+						"Shape mismatch."
 					)]))
 			          []
                               ]
@@ -110,7 +110,7 @@ whenP False _ = mzero
 
 -- | Functions used in the derived code
 checkEquality x y = if (x == y) then return x
-				else throwCError "Non-Data value mismatch in tryZip"
+				else throwCError "Value mismatch."
 
 
 -- | Extract a 'DataDef' value from a type using the TH 'reify'

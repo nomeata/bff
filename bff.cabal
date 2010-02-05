@@ -1,5 +1,5 @@
 name:           bff
-version:        0.1
+version:        0.2
 license:        PublicDomain
 description:
         This is an implementation of the ideas presented in "Bidirectionalization
@@ -11,15 +11,18 @@ description:
         to bff, in the form of a CGI program. Make sure you understand the
         security implications before allowing untrusted access to the script.
         .
-        Using the cabal flag "stats" will generate a program that collects performance
-        statistics about bff and render them as PNG or PDF files.
+        Using the cabal flag "stats" will generate programs that collect performance
+        statistics about bff and print them as a table.
+        .
+        Using the cabal flag "render" will generate a program that renders collected
+        performance statistics as PDF files.
 
 author:         Janis Voigtlaender, Joachim Breitner
 
 maintainer:     Janis Voigtlaender
 
-category:       Development, Language
-synopsis:       Bidirectionalization for Free
+category:       Data
+synopsis:       Bidirectionalization for Free! (POPL'09)
 
 build-type:     Simple
 cabal-version:  >= 1.2
@@ -34,12 +37,16 @@ flag binaries
         default: False
 
 flag stats
-        description: Build the stats-generating program
+        description: Build the stats-generating and -printing programs
+        default: False
+
+flag render
+        description: Build the stats-rendering program
         default: False
 
 library
         exposed-modules:
-                Data.SimpleTree
+                SimpleTree
                 Data.Zippable
                 Data.IntMapEq
                 Data.IntMapOrd
@@ -48,8 +55,8 @@ library
                 Data.Derive.Zippable
                 Data.Zippable.Definition
         build-depends:
-                base, containers, mtl, template-haskell, category-extras == 0.53.5, derive == 0.1.1,
-                haskell98, bimap == 0.2.3 || == 0.2.4, unix
+                base, containers, mtl, template-haskell, category-extras >= 0.53.5, derive >= 0.1.1,
+                haskell98, bimap >= 0.2.3, unix
         
 executable bff-shell
         main-is:
@@ -102,7 +109,7 @@ executable bff-stats-render
                 StatsRender.hs
         other-modules:
                 StatsDef
-        if flag(stats)
+        if flag(render)
                 buildable: True 
                 build-depends:
                         Chart >= 0.8

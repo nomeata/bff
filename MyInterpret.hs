@@ -24,7 +24,7 @@ import Data.Either
 
 -- Scoped modules
 modules = [    "Data.Bff",
-	       "Data.SimpleTree",
+	       "SimpleTree",
                "Prelude",
                "Data.List"
 --               "ShowQ",

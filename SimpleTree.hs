@@ -1,14 +1,14 @@
 {-# OPTIONS_GHC  -XTemplateHaskell  #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SimpleTree
+-- Module      :  SimpleTree
 -- 
 -- Maintainer  :  Janis Voigtlaender
 -- Stability   :  experimental
 --
 -- A very simple binary Tree data structure.
 -----------------------------------------------------------------------------
-module Data.SimpleTree where
+module SimpleTree where
 
 import Data.Traversable
 import Data.Foldable

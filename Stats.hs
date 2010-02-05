@@ -30,14 +30,13 @@ import StatsDef
 -- Configuration --
 -------------------
 
-sizes = (\n -> [0,(n`div`100)..n]) 100000
-repetitions = 3
+sizes = (\n -> [1,(n`div`200)..n])
+repetitions = 10
 tests_to_run =
 	[ runTest test1
-	, runTest test2
-	, runTest test3
-	, runTest test4
-	, runTest test5
+        , runTest test2
+        , runTest test3
+        , runTest test4
 	]
 
 ----------------------
@@ -46,6 +45,7 @@ tests_to_run =
 
 data Test c c' a = Test
 	{ testName    :: String
+        , maxN        :: Int
 	, genTestCase :: Int  -> c  a
         , getTest     :: c a  -> c' a 
 	, putTestMan  :: c a  -> c' a -> c a
@@ -59,8 +59,9 @@ data Test c c' a = Test
 --
 
 test1 = Test
-	{ testName    = "halve, scaled"
-	, genTestCase = \n -> [0..n]
+	{ testName    = "halve, normalized"
+	, maxN        = 100000
+	, genTestCase = \n -> [1..n]
 	, getTest     = halve 
 	, putTestMan  = put1
 	, putTestAuto = bff halve
@@ -81,15 +82,16 @@ put1 as as' | length as' == n
 --
 
 test2 = Test
-	{ testName    = "flatten, left-leaning"
-	, genTestCase = fix (\loop n -> if n == 0
+	{ testName    = "flatten, left-leaning trees, normalized"
+	, maxN        = 5000
+	, genTestCase = fix (\loop n -> if n == 1
                                         then Leaf ()
                                         else Node (loop (n-1)) (Leaf ()))
 	, getTest     = flatten
 	, putTestMan  = put2
 	, putTestAuto = bff flatten
 	, modifyTest  = id
-        , scale       = const
+        , scale       = \m s -> m / fromIntegral s
 	}
 
 flatten :: Tree a -> [a]
@@ -108,15 +110,16 @@ put2 s v = case go s v of (t,[]) -> t
 --
 
 test3 = Test
-	{ testName    = "flatten, right-leaning"
-	, genTestCase = fix (\loop n -> if n == 0
+	{ testName    = "flatten, right-leaning trees, normalized"
+	, maxN        = 100000
+	, genTestCase = fix (\loop n -> if n == 1
                                         then Leaf ()
                                         else Node (Leaf ()) (loop (n-1)))
 	, getTest     = flatten
 	, putTestMan  = put2
 	, putTestAuto = bff flatten
 	, modifyTest  = id
-        , scale       = const
+        , scale       = \m s -> m / fromIntegral s
 	}
 
 --
@@ -124,36 +127,23 @@ test3 = Test
 --
 
 test4 = Test
-	{ testName    = "nodups, all unequal"
-	, genTestCase = \n -> [0..n]
-	, getTest     = nodups
+	{ testName    = "rmdups, all elements different, normalized"
+	, maxN        = 10000
+	, genTestCase = \n -> [1..n]
+	, getTest     = rmdups
 	, putTestMan  = put3
-	, putTestAuto = bff_Eq nodups
+	, putTestAuto = bff_Eq rmdups
 	, modifyTest  = id
-        , scale       = const
+        , scale       = \m s -> m / fromIntegral s
 	}
 
-nodups :: Eq a => [a] -> [a]
-nodups = List.nub
+rmdups :: Eq a => [a] -> [a]
+rmdups = List.nub
 
 put3 :: Eq a => [a] -> [a] -> [a]
 put3 s v | v == List.nub v && length v == length s'
          = map (fromJust . flip lookup (zip s' v)) s
            where s' = List.nub s
-
---
--- Test 5
---
-
-test5 = Test
-	{ testName    = "nodups, all equal"
-	, genTestCase = \n -> map (const 0) [0..n]
-	, getTest     = nodups
-	, putTestMan  = put3
-	, putTestAuto = bff_Eq nodups
-	, modifyTest  = id
-        , scale       = const
-	}
 
 ----------------------------------
 -- Stats calculation and output --
@@ -180,7 +170,7 @@ collectStats test = mapM (\size -> do
 	        automatic <- stats test putTestAuto size
 		putStr " "
                 return (size, scale test manual size, scale test automatic size)
-	) sizes
+	) (sizes (maxN test))
 
 runTest :: (Show (c v), Show (c' v), F.Foldable c', Zippable c', Traversable c, Eq v) =>
            Test c c' v -> IO (String, StatRunData)
@@ -201,10 +191,10 @@ main = do hSetBuffering stdout NoBuffering
 
 -- Data Definition
 data Tree a = Leaf a | Node (Tree a) (Tree a) deriving Show
-$(derive makeZippable ''Tree)
 -- Lined in, otherwise name clashes with Prelude.foldr occurs
 $(derive makeFunctor ''Tree)
 instance F.Foldable Tree where
       foldr f b (Leaf a1) = (f a1 . id) b
       foldr f b (Node a1 a2) = (flip (F.foldr f) a1 . (flip (F.foldr f) a2 . id)) b 
 $(derive makeTraversable ''Tree)
+$(derive makeZippable ''Tree)

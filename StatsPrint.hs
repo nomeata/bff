@@ -7,7 +7,7 @@ import Text.Printf
 import StatsDef
 
 putTable statData = putStr (tabelize stringData)
-  where stringData = ["Size","Manual Getter", "Automatic Getter"] :
+  where stringData = ["size","manual (put)", "automatic (bff get)"] :
                      map (\(s,m,a) -> [show s, printf "%.3f" m, printf "%.3f" a]) statData
 
 tabelize :: [[String]] -> String
@@ -18,7 +18,7 @@ tabelize table = unlines (map padLine table)
 
 printTest :: String -> StatRunData -> IO ()
 printTest name statData = do
-	  putStr   $ "Test \"" ++ name ++ "\" "
+	  putStr   $ "Measurements \"" ++ name ++ "\" "
           putStrLn $ ""
 	  putTable statData
           putStrLn $ ""

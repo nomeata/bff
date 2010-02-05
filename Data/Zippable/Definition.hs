@@ -6,6 +6,8 @@ module Data.Zippable.Definition
 	, cErrorToEither
 	) where
 
+import Data.Traversable
+
 -- | Efficient error reporting monad, as described in the paper \"Asymptotic
 -- Improvement of Computations over Free Monads\" by Janis Voigtländer.
 --
@@ -27,7 +29,7 @@ cErrorToEither (CError p) = p Right
 
 -- | Data structures that can be folded.
 --
--- Minimal complete definition: 'tryZipWith''
+-- Minimal complete definition: any of 'tryZipWith'' (preferred for efficiency), 'tryZipWith', or 'tryZip'
 --
 -- For example, given a data type:
 --
@@ -40,17 +42,20 @@ cErrorToEither (CError p) = p Right
 -- >   tryZipWith' func (Node a1 a2) (Node b1 b2) = do z1 <- tryZipWith' func a1 b1
 -- >                                                   z2 <- tryZipWith' func a2 b2
 -- >                                                   return (Node z1 z2)
--- >   tryZipWith' _ _ _ = throwCError "Structure mismatch."
-class Zippable k where
+-- >   tryZipWith' _ _ _ = throwCError "Shape mismatch."
+class Traversable k => Zippable k where
 
   -- | Zip the elements of two structures with the given CError computation.
-  tryZipWith' :: (a -> b -> CError c) ->  k a -> k b -> CError (k c)
+  --
+  -- @'tryZipWith'' func x y = either 'throwCError' (Data.Traversable.mapM (uncurry func)) ('tryZip' x y)
+  tryZipWith' ::(a -> b -> CError c) ->  k a -> k b -> CError (k c)
+  tryZipWith' func x y = either throwCError (Data.Traversable.mapM (uncurry func)) (tryZip x y)
 
   -- | Zip the elements of two structures with the given function.
   -- 
   -- @'tryZipWith' func x y = 'cErrorToEither' ('tryZipWith'' (\a b -> return (func a b)) x y)@
   tryZipWith :: (a -> b -> c) ->  k a -> k b -> Either String (k c)
-  tryZipWith combiner  x y = cErrorToEither (tryZipWith' (\x y -> return (combiner x y)) x y)
+  tryZipWith func x y = cErrorToEither (tryZipWith' (\a b -> return (func a b)) x y)
 
   -- | Zip the elements of two structures as tuples.
   --

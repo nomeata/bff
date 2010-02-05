@@ -82,7 +82,7 @@ examples =
 		, "get (Leaf a) = [a]"
 		, "get (Node t1 t2) = get t1 ++ get t2"
 		])
-	, ("nodups", unlines
+	, ("rmdups", unlines
 		[ "source = \"abcbabcbaccba\""
 		, ""
 		, "get = List.nub"
@@ -108,21 +108,21 @@ examples =
 		, ""
 		, "get = (\\s -> s ++ s)"
 		])
-	, ("tail/nodups", unlines
+	, ("tail/rmdups", unlines
 		[ "source = \"abcbabcbaccba\""
 		, ""
-                , "nodups = List.nub"
+                , "rmdups = List.nub"
                 , ""
-		, "get = tail . nodups"
+		, "get = tail . rmdups"
 		])
 	]
 
-defaultCode = fromJust (lookup "flatten" examples)
+defaultCode = fromJust (lookup "halve" examples)
 	
 outputErrors :: String -> Html
 outputErrors s = 
            p << (
-                strong << "An error occured:" +++ br +++
+                strong << "An error occurred:" +++ br +++
                 pre << s
                 )
                 

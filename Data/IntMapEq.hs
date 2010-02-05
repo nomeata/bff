@@ -48,7 +48,7 @@ insert k a (IntMapEq m) = IntMapEq (IntMap.insert k a m)
 checkInsert :: Eq a => Int -> a -> IntMapEq a -> Either String (IntMapEq a)
 checkInsert i b m = case lookup i m of
                       Nothing -> if memberR b m 
-                                   then Left "Update violates unequality."
+                                   then Left "Update violates differentness."
                                    else Right (insert i b m)
                       Just c  -> if b==c 
                                    then Right m 
@@ -78,7 +78,7 @@ union h (IntMapEq m) = IntMap.foldWithKey f (Right h) m
   where f j a (Right h) = if member j h 
                             then Right h 
                             else if memberR a h
-                                   then Left "Update violates unequality."
+                                   then Left "Update violates differentness."
                                    else Right (insert j a h)
         f j a l         = l
 

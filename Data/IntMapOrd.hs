@@ -74,7 +74,7 @@ insert k a (IntMapOrd m) = let (m1,m2) = Map.split k (Bimap.toMap m)
 checkInsert :: Ord a => Int -> a -> IntMapOrd a -> Either String (IntMapOrd a)
 checkInsert i b m = case lookup i m of
                       Nothing -> if memberR b m
-                                   then Left "Update violates unequality."
+                                   then Left "Update violates differentness."
                                    else insert i b m
                       Just c  -> if b==c 
                                    then Right m 
@@ -88,7 +88,7 @@ union h (IntMapOrd m) = Bimap.fold f (Right h) m
   where f k a (Right h) = if member k h 
                             then Right h 
                             else if memberR a h
-                                   then Left "Update violates unequality."
+                                   then Left "Update violates differentness."
                                    else insert k a h
         f k a l         = l
 

@@ -1,18 +1,17 @@
 {-# OPTIONS_GHC -XRank2Types #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Bff
--- Copyright   :  (c) 2008 Janis Voigtländer
+-- Module      :  Data.Bff
 -- 
--- Maintainer  :  Janis Voigtländer
+-- Maintainer  :  Janis Voigtlaender
 -- Stability   :  experimental
 --
 -- This modules contains automatic bidirectionalizer, as described in the paper
--- \"Bidirectionalization For Free\" by the same author.
+-- \"Bidirectionalization for Free!\" (POPL'09) by Janis Voigtlaender.
 --
 -----------------------------------------------------------------------------
 
-module Bff (bff, bff_Eq, bff_Ord) where
+module Data.Bff (bff, bff_Eq, bff_Ord) where
 
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap (fromAscList, union, lookup, empty, insert)
@@ -47,9 +46,6 @@ assoc :: (Zippable k, Foldable k, Eq a)
          => k Int -> k a -> Either String (IntMap a)
 assoc = makeAssoc checkInsert IntMap.empty
 
-makeAssoc :: (Zippable k, Foldable k) 
-             => (Int -> a -> b -> Either String b) -> b
-                -> k Int -> k a -> Either String b
 makeAssoc checkInsert empty s'' v =
   either Left f (tryZip s'' v)
     where f = Data.Foldable.foldr 
@@ -65,8 +61,8 @@ checkInsert i b m =
                  then Right m 
                  else Left "Update violates equality."
 
--- | Given an sufficiently general getter, that returns a view without looking at the
---   values of the input data structure, this functions returns a setter that inserts
+-- | Given a sufficiently polymorphic getter that returns a view without looking at the
+--   values of the input data structure, this function returns a setter that inserts
 --   an updated view back into the original data structure.
 bff :: (Traversable k, Zippable k', Foldable k') 
        => (forall a. k a -> k' a) 
@@ -113,16 +109,18 @@ bff_Eq get = \s v ->
 
 template_Ord :: (Traversable k, Ord a) 
                 => k a -> (k Int,IntMapOrd a)
-template_Ord s = 
-  case traverse number_Ord s of
-    Lift (Const as,f) -> let m = IntMapOrd.fromAscPairList 
-                                 (zip [0..] (Set.toAscList as))
-                         in  (f m,m)
+template_Ord s = case traverse number_Ord s of
+                   Lift (Const as,f) -> let m = set2map as
+                                        in  (f m,m)
 
 number_Ord :: Ord a => a -> Lift (,) (Const (Set a)) 
                                      ((->) (IntMapOrd a)) Int
 number_Ord a = Lift (Const (Set.singleton a), 
                      fromJust . IntMapOrd.lookupR a)
+
+set2map :: Ord a => Set a -> IntMapOrd a
+set2map as = 
+  IntMapOrd.fromAscPairList (zip [0..] (Set.toAscList as))
 
 assoc_Ord :: (Zippable k, Foldable k, Ord a)
              => k Int -> k a -> Either String (IntMapOrd a)
@@ -130,7 +128,7 @@ assoc_Ord = makeAssoc IntMapOrd.checkInsert
                       IntMapOrd.empty
 
 -- | Works like 'bff', but can also handle getter functions that compare the elements
---   using the 'Ord' typeclass.
+--   using the 'Ord' typeclass (and thus potentially also using '==' or '/=').
 bff_Ord :: (Traversable k, Zippable k', Foldable k') 
            => (forall a. Ord a => k a -> k' a) 
               -> (forall a. Ord a => k a -> k' a -> k a)
@@ -139,6 +137,3 @@ bff_Ord get = \s v ->
       h      = either error id (assoc_Ord (get s') v)
       h'     = either error id (IntMapOrd.union h g)
   in  seq h' (fmap (fromJust . flip IntMapOrd.lookup h') s')
-
-
-
