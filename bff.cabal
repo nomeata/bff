@@ -112,6 +112,6 @@ executable bff-stats-render
         if flag(render)
                 buildable: True 
                 build-depends:
-                        Chart >= 0.8
+                        Chart >= 0.12, data-accessor, colour
         else
                 buildable: False

@@ -3,6 +3,9 @@
   #-}
 
 import Graphics.Rendering.Chart
+import Data.Accessor.Basic
+import Data.Colour
+
 import System.IO
 import Data.List
 import StatsDef
@@ -10,33 +13,31 @@ import StatsDef
 
 putGraph name statData filename = renderableToPDFFile r 600 400 filename
   where r = toRenderable $
-		defaultLayout1
-		{ layout1_title = "Measurements \"" ++ name ++"\""
-		, layout1_plots = [
-			("manual (put)", HA_Bottom, VA_Left,
-				toPlot $ defaultPlotLines 
-					{ plot_lines_values = [manualData]
-					, plot_lines_style  = dashedLine 1 [4,4] (Color 0 0 0)
-					}
-			),
-			("automatic (bff get)", HA_Bottom, VA_Left,
-				toPlot $ defaultPlotLines 
-					{ plot_lines_values = [automaticData]
-					, plot_lines_style  = solidLine 1 (Color 0 0 0)
-					}
-			)
+  		compose [
+		   set layout1_title $ "Measurements \"" ++ name ++"\""
+		 , set layout1_plots [ 
+		 	Left $ toPlot $ compose [
+				  set plot_lines_title "manual (put)"
+				, set plot_lines_style $ dashedLine 1 [4,4] (opaque black)
+				, set plot_lines_values [manualData]
+			] defaultPlotLines ,
+		 	Left $ toPlot $ compose [
+				  set plot_lines_title "automatic (bff get)"
+				, set plot_lines_style $ solidLine 1 (opaque black)
+				, set plot_lines_values [automaticData]
+			] defaultPlotLines 
 			]
-		, layout1_vertical_axes = 
-			linkedAxes' (autoScaledAxis (defaultAxis {axis_title =
-					"Average time per run in ms"
-				}))
-		, layout1_horizontal_axes = 
-			linkedAxes' (autoScaledAxis (defaultAxis {axis_title =
-					"Size of original source"
-				}))
-		}
+		, set layout1_left_axis $ compose [
+			set laxis_title "Average time per run in ms",
+			set laxis_generate (autoScaledAxis defaultLinearAxis)
+			] defaultLayoutAxis
+		, set layout1_bottom_axis $ compose [
+			set laxis_title "Size of original source",
+			set laxis_generate (autoScaledAxis defaultLinearAxis)
+			] defaultLayoutAxis
+		] defaultLayout1
         (manualData, automaticData) = unzip $ map f statData
-	f (s, m, a) = (Point (fromIntegral s) m, Point (fromIntegral s) a)
+	f (s, m, a) = ((fromIntegral s, m), (fromIntegral s, a))
 
 printTest :: String -> StatRunData -> IO ()
 printTest name statData = do
