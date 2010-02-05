@@ -47,7 +47,7 @@ class Traversable k => Zippable k where
 
   -- | Zip the elements of two structures with the given CError computation.
   --
-  -- @'tryZipWith'' func x y = either 'throwCError' (Data.Traversable.mapM (uncurry func)) ('tryZip' x y)
+  -- @'tryZipWith'' func x y = either 'throwCError' (Data.Traversable.mapM (uncurry func)) ('tryZip' x y)@
   tryZipWith' ::(a -> b -> CError c) ->  k a -> k b -> CError (k c)
   tryZipWith' func x y = either throwCError (Data.Traversable.mapM (uncurry func)) (tryZip x y)
 
