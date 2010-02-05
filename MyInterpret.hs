@@ -7,8 +7,7 @@ module MyInterpret
         )
          where 
 
--- import Mueval.Resources
-import Language.Haskell.Interpreter.GHC
+import Language.Haskell.Interpreter
 import Language.Haskell.Interpreter.GHC.Unsafe
 
 import Prelude hiding (catch)
@@ -67,10 +66,10 @@ timeoutIO action = bracket
 myInterpreter todo exp = timeoutIO $ do
         when (unsafe exp) $ throwDyn (MyException "Indicators for unsafe computations found in exp")
 
-        session <- newSession
-        withSession session $ do
+	eResult <- runInterpreter $ do
                 setUseLanguageExtensions False
-                setOptimizations All
+		-- Not available in hint-3.2?
+                -- setOptimizations All
 
                 reset
                 -- no need for temporary files I hope
@@ -78,10 +77,14 @@ myInterpreter todo exp = timeoutIO $ do
 	
 		unsafeSetGhcOption "-fno-monomorphism-restriction"
                 
-                -- liftIO $ Mueval.Resources.limitResources True
                 setImports modules
                 
+		liftIO $ putStrLn exp
                 todo exp
+	
+	case eResult of
+		Left exception -> throw exception
+		Right result -> return result
         
 formatInterpreterError (UnknownError s) = "Unknown Interpreter Error " ++ s
 formatInterpreterError (WontCompile es) = "Could not compile code:\n" ++ unlines (map errMsg es)
