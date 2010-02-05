@@ -55,7 +55,7 @@ library
                 Data.Derive.Zippable
                 Data.Zippable.Definition
         build-depends:
-                base, containers, mtl, template-haskell, category-extras >= 0.53.5, derive >= 0.1.1,
+                base >= 2 && < 4, containers, mtl, template-haskell, category-extras >= 0.53.5, derive >= 0.1.1,
                 haskell98, bimap >= 0.2.3, unix
         
 executable bff-shell
@@ -65,7 +65,7 @@ executable bff-shell
                 MyInterpret
         if flag(binaries)
                 build-depends:
-                        base, directory, hint >= 0.3.2
+                        base >= 2 && < 4, directory, hint >= 0.3.2
                 buildable: True 
         else
                 buildable: False
@@ -77,7 +77,7 @@ executable bff-cgi
                 MyInterpret
         if flag(binaries)
                 build-depends:
-                        base, directory, xhtml, cgi, hint >= 0.3.2, utf8-string
+                        base >= 2 && < 4, directory, xhtml, cgi, hint >= 0.3.2, utf8-string
                 buildable: True 
         else
                 buildable: False
